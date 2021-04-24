@@ -4,18 +4,58 @@
 -- WIP
 --
 
+local ControlSpec = require "controlspec"
+
 local Trove = include("lib/trove")
 
 local SCREEN_FRAMERATE = 15
 local screen_dirty = true
 
-local timeline_clock
+local UPDATE_RATE = 30
+local update_metro
 
 local slice_index = 1
 local bird_data = {}
 
+local NUM_VIEW_MODES = 3
+local view_mode = 2 -- Map, Stats, Bounds
 
--- Metro/clock callbacks
+local specs = {}
+specs.SPEED = ControlSpec.new(0.1, 4, "exp", 0, 0.5, "")
+
+
+-- Functions
+
+local function current_bird()
+  return Trove.bird_data[params:get("species")]
+end
+
+local function current_slice()
+  return current_bird().slices[util.round(slice_index)]
+end
+
+local function advance(step)
+
+  local num_slices = current_bird().num_slices
+  slice_index = slice_index + step
+  if slice_index > num_slices then slice_index = 1 end
+  if slice_index < 1 then slice_index = num_slices end
+
+  screen_dirty = true
+end
+
+local function bird_changed()
+  slice_index = 1
+end
+
+local function normalize_point(x, y)
+  x = util.linlin(-180, 180, 0, 1, (x - current_bird().x_offset) * current_bird().scale)
+  y = util.linlin(-90, 90, 1, 0, (y - current_bird().y_offset) * current_bird().scale)
+  return x, y
+end
+
+
+-- Metro callbacks
 
 local function screen_update()
   if screen_dirty then
@@ -24,34 +64,23 @@ local function screen_update()
   end
 end
 
-local function advance()
-  while true do
-
-    slice_index = slice_index + 1
-    if slice_index > Trove.bird_data[params:get("selected_bird")].num_slices then
-      slice_index = 1
-    end
-    -- slice_index = 53
-
-    screen_dirty = true
-    -- print("tick", slice_index)
-    clock.sync(0.1)
-  end
-end
-
-
--- Functions
-
-local function bird_changed()
-  slice_index = 0
+local function update()
+  advance(params:get("speed"))
 end
 
 
 -- Encoder input
 function enc(n, delta)
+
   if n == 1 then
-    params:delta("selected_bird", delta)
+    params:delta("species", delta)
+
   elseif n == 2 then
+    if params:get("play") == 1 then
+      params:delta("speed", delta)
+    else
+      advance(delta)
+    end
 
   elseif n == 3 then
     
@@ -65,10 +94,13 @@ function key(n, z)
     if n == 1 then
 
     elseif n == 2 then
+      params:delta("play", 1)
 
     elseif n == 3 then
+      view_mode = util.wrap(view_mode + 1, 1, NUM_VIEW_MODES)
       
     end
+    screen_dirty = true
   end
 end
 
@@ -93,37 +125,50 @@ function init()
 
   params:add {
     type = "option",
-    id = "selected_bird",
-    name = "Bird Species",
+    id = "species",
+    name = "Species",
     options = bird_names,
     action = bird_changed
+  }
+
+  params:add {
+    type = "binary",
+    id = "play",
+    name = "Play",
+    behavior = "toggle",
+    default = 1,
+    action = function(value)
+      if value == 1 then
+        update_metro:start()
+      else
+        update_metro:stop()
+      end
+    end
+  }
+
+  params:add {
+    type = "control",
+    id = "speed",
+    name = "Speed",
+    controlspec = specs.SPEED
   }
 
   -- Start routines
 
   metro.init(screen_update, 1 / SCREEN_FRAMERATE):start()
 
-  timeline_clock = clock.run(advance)
+  update_metro = metro.init(update, 1 / UPDATE_RATE)
+  update_metro:start()
 
 end
 
 
-local function draw_map()
+local function draw_map(points, level)
 
-  local bird = Trove.bird_data[params:get("selected_bird")]
-
-  -- Scale and center on screen
-  
-  local bird_x_range = bird.max_x - bird.min_x
-  local bird_y_range = bird.max_y - bird.min_y
-
-  local scale = math.min(360 / bird_x_range, 180 / bird_y_range)
-  local x_offset = bird_x_range / 2 + bird.min_x
-  local y_offset = bird_y_range / 2 + bird.min_y
-
-  screen.level(15)
-  for _, p in ipairs(bird.slices[slice_index].points) do
-    screen.rect(util.linlin(-180, 180, 0, 127, (p.x - x_offset) * scale), util.linlin(-90, 90, 63, 0, (p.y - y_offset) * scale), 1, 1)
+  screen.level(level)
+  for _, p in ipairs(points) do
+    local nx, ny = normalize_point(p.x, p.y)
+    screen.rect(nx * 128 - 0.5, ny * 64 - 0.5, 1, 1)
     screen.fill()
   end
 
@@ -134,15 +179,61 @@ function redraw()
   screen.clear()
   screen.aa(1)
 
-  draw_map()
+  -- Map
+  local map_level = 3
+  if view_mode == 1 then map_level = 15 end
+  draw_map(current_slice().points, map_level)
 
-  screen.level(15)
-  screen.move(0, 11)
-  local slice = Trove.bird_data[params:get("selected_bird")].slices[slice_index]
-  screen.text(slice.year .. " " .. slice.week)
-  -- screen.text(params:string("selected_bird"))
-  -- screen.move(10, 26)
+  -- Progress
+  screen.level(3)
+  screen.rect(0, 63, util.round(util.linlin(1, current_bird().num_slices, 0, 128, slice_index)), 1)
   screen.fill()
+
+  -- Top left text
+  screen.level(15)
+  screen.move(2, 7)
+  screen.text(params:string("species"))
+  screen.level(3)
+  screen.move(2, 16)
+  screen.text(current_slice().year .. " " .. current_slice().week)
+  screen.fill()
+
+  -- Stats view
+  if view_mode == 2 then
+
+    -- Mass
+    local norm_mass = util.linlin(current_bird().min_points, current_bird().max_points, 0, 1, current_slice().num_points)
+    screen.level(15)
+    screen.move(2, 30)
+    screen.text("Mass")
+    screen.fill()
+    screen.rect(30, 27, util.round(norm_mass * 86),  2)
+    screen.fill()
+
+    -- Density
+    -- TODO normalize?
+    local slice_w = current_slice().max_x - current_slice().min_x
+    local slice_h = current_slice().max_y - current_slice().min_y
+    local density = (slice_w * slice_h) / current_slice().num_points
+    screen.level(15)
+    screen.move(2, 39)
+    screen.text("Density " .. util.round(density, 0.1) .. " " .. current_slice().num_points)
+    screen.fill()
+    -- screen.rect(30, 36, util.round(mass * 86),  2)
+    -- screen.fill()
+
+  -- Bounds view
+  elseif view_mode == 3 then
+
+    -- Slice bounds
+    screen.level(15)
+    n_min_x, n_min_y = normalize_point(current_slice().min_x, current_slice().max_y)
+    n_max_x, n_max_y = normalize_point(current_slice().max_x, current_slice().min_y)
+    screen.rect(math.floor(n_min_x * 128) - 0.5, math.floor(n_min_y * 64) - 0.5, math.ceil((n_max_x - n_min_x) * 128) + 1,  math.ceil((n_max_y - n_min_y) * 64) + 1)
+    screen.stroke()
+
+
+  end
 
   screen.update()
 end
