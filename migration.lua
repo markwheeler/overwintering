@@ -18,7 +18,7 @@ local slice_index = 1
 local bird_data = {}
 
 local NUM_VIEW_MODES = 3
-local view_mode = 2 -- Map, Stats, Bounds
+local view_mode = 3 -- Map, Stats, Bounds
 
 local specs = {}
 specs.SPEED = ControlSpec.new(0.1, 4, "exp", 0, 0.5, "")
@@ -50,7 +50,7 @@ end
 
 local function normalize_point(x, y)
   x = util.linlin(-180, 180, 0, 1, (x - current_bird().x_offset) * current_bird().scale)
-  y = util.linlin(-90, 90, 1, 0, (y - current_bird().y_offset) * current_bird().scale)
+  y = util.linlin(-90, 90, 0, 1, (y - current_bird().y_offset) * current_bird().scale)
   return x, y
 end
 
@@ -165,12 +165,25 @@ end
 
 local function draw_map(points, level)
 
+  -- screen.aa(0)
+
   screen.level(level)
-  for _, p in ipairs(points) do
-    local nx, ny = normalize_point(p.x, p.y)
-    screen.rect(nx * 128 - 0.5, ny * 64 - 0.5, 1, 1)
-    screen.fill()
-  end
+  -- screen.level(15)
+  -- for _, c in ipairs(current_slice().clusters) do
+    for _, p in ipairs(current_slice().points) do
+      if p.cluster_id % 2 == 0 then
+        screen.level(15)
+      else
+        screen.level(3)
+      end
+      local nx, ny = normalize_point(p.x, p.y)
+      screen.rect(nx * 128 - 0.5, 64 - ny * 64 - 0.5, 1, 1)
+      screen.fill()
+    end
+    -- screen.level(3)
+  -- end
+
+  -- screen.aa(1)
 
 end
 
@@ -207,30 +220,28 @@ function redraw()
     screen.move(2, 30)
     screen.text("Mass")
     screen.fill()
-    screen.rect(30, 27, util.round(norm_mass * 86),  2)
+    screen.rect(40, 27, util.round(norm_mass * 76),  2)
     screen.fill()
 
     -- Density
     -- TODO normalize?
-    local slice_w = current_slice().max_x - current_slice().min_x
-    local slice_h = current_slice().max_y - current_slice().min_y
-    local density = (slice_w * slice_h) / current_slice().num_points
+    
     screen.level(15)
     screen.move(2, 39)
-    screen.text("Density " .. util.round(density, 0.1) .. " " .. current_slice().num_points)
+    screen.text("Density")
     screen.fill()
-    -- screen.rect(30, 36, util.round(mass * 86),  2)
-    -- screen.fill()
+    screen.rect(40, 36, util.round(util.linlin(current_bird().min_density, current_bird().max_density, 0, 76, current_slice().density)),  2)
+    screen.fill()
 
   -- Bounds view
   elseif view_mode == 3 then
 
     -- Slice bounds
-    screen.level(15)
-    n_min_x, n_min_y = normalize_point(current_slice().min_x, current_slice().max_y)
-    n_max_x, n_max_y = normalize_point(current_slice().max_x, current_slice().min_y)
-    screen.rect(math.floor(n_min_x * 128) - 0.5, math.floor(n_min_y * 64) - 0.5, math.ceil((n_max_x - n_min_x) * 128) + 1,  math.ceil((n_max_y - n_min_y) * 64) + 1)
-    screen.stroke()
+    -- screen.level(15)
+    -- n_min_x, n_min_y = normalize_point(current_slice().min_x, current_slice().min_y)
+    -- n_max_x, n_max_y = normalize_point(current_slice().max_x, current_slice().max_y)
+    -- screen.rect(math.floor(n_min_x * 128) - 0.5, 64 - math.floor(n_max_y * 64) - 0.5, math.ceil((n_max_x - n_min_x) * 128) + 1,  math.ceil((n_max_y - n_min_y) * 64) + 1)
+    -- screen.stroke()
 
 
   end
