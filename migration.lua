@@ -17,6 +17,11 @@ local update_metro
 local slice_index = 1
 local bird_data = {}
 
+local TRIG_RANGE = 3 -- LatLong Degrees
+local TRIG_COLS = 6
+local TRIG_ROWS = 3
+local trigger_positions = {}
+
 local NUM_VIEW_MODES = 4
 local view_mode = 1-- Map, Stats, Bounds, Triggers
 
@@ -34,6 +39,12 @@ local function current_slice()
   return current_bird().slices[util.round(slice_index)]
 end
 
+local function normalize_point(x, y)
+  x = util.linlin(-180, 180, 0, 1, (x - current_bird().x_offset) * current_bird().scale)
+  y = util.linlin(-90, 90, 0, 1, (y - current_bird().y_offset) * current_bird().scale)
+  return x, y
+end
+
 local function advance(step)
 
   local num_slices = current_bird().num_slices
@@ -46,12 +57,39 @@ end
 
 local function bird_changed()
   slice_index = 1
+
+  -- Generate trigs
+  triggers = {}
+  local trig_x_spacing = (current_bird().max_x - current_bird().min_x) / (TRIG_COLS + 1)
+  local trig_y_spacing = (current_bird().max_y - current_bird().min_y) / (TRIG_ROWS + 1)
+  
+  for c = 1, TRIG_COLS do
+    for r = 1, TRIG_ROWS do
+
+      local trig = {}
+      trig.active = false
+      trig.x = c * trig_x_spacing + current_bird().min_x
+      trig.y = r * trig_y_spacing + current_bird().min_y
+      trig.screen_x, trig.screen_y = normalize_point(trig.x, trig.y)
+      trig.screen_x = util.round(trig.screen_x * 128)
+      trig.screen_y = util.round((1 - trig.screen_y) * 64)
+      table.insert(triggers, trig)
+
+    end
+  end
 end
 
-local function normalize_point(x, y)
-  x = util.linlin(-180, 180, 0, 1, (x - current_bird().x_offset) * current_bird().scale)
-  y = util.linlin(-90, 90, 0, 1, (y - current_bird().y_offset) * current_bird().scale)
-  return x, y
+local function detect_triggers()
+  -- TODO Perf test
+  for _, t in ipairs(triggers) do
+    t.active = false
+    for _, p in ipairs(current_slice().points) do
+      if p.x < t.x + TRIG_RANGE and p.x > t.x - TRIG_RANGE and p.y > t.y - TRIG_RANGE and p.y < t.y + TRIG_RANGE then
+        t.active = true
+        break
+      end
+    end
+  end
 end
 
 
@@ -153,6 +191,9 @@ function init()
     controlspec = specs.SPEED
   }
 
+  -- Init bird
+  bird_changed()
+
   -- Start routines
 
   metro.init(screen_update, 1 / SCREEN_FRAMERATE):start()
@@ -164,20 +205,17 @@ end
 
 
 local function draw_map(points, level)
-
-  -- screen.aa(0)
-
   screen.level(level)
   for _, p in ipairs(current_slice().points) do
     local nx, ny = normalize_point(p.x, p.y)
     screen.rect(nx * 128 - 0.5, 64 - ny * 64 - 0.5, 1, 1)
     screen.fill()
   end
-
-  -- screen.aa(1)
 end
 
 function redraw()
+
+  -- TODO lots of code in here that needs to move to the advance function, keep this just drawing
   
   screen.clear()
   screen.aa(1)
@@ -253,41 +291,19 @@ function redraw()
   -- Triggers view
   elseif view_mode == 4 then
 
-    local TRIG_RANGE = 3 -- LatLong Degrees
-    local NUM_COLS = 6
-    local NUM_ROWS = 3
-
+    detect_triggers()
+    
     screen.level(15)
-    for c = 1, NUM_COLS do
-      for r = 1, NUM_ROWS do
-
-        -- TODO move some of this outside loop
-        -- TODO General cleanup of trigger code?
-        local trig_x_ll = c * ((current_bird().max_x - current_bird().min_x) / (NUM_COLS + 1)) + current_bird().min_x
-        local trig_y_ll = r * ((current_bird().max_y - current_bird().min_y) / (NUM_ROWS + 1)) + current_bird().min_y
-        local trig_x, trig_y = normalize_point(trig_x_ll, trig_y_ll)
-        trig_x = trig_x * 128
-        trig_y = (1 - trig_y) * 64
-
-        -- Detect trigger
-        local trig = false
-        for _, p in ipairs(current_slice().points) do
-          if p.x > trig_x_ll - TRIG_RANGE and p.x < trig_x_ll + TRIG_RANGE and p.y > trig_y_ll - TRIG_RANGE and p.y < trig_y_ll + TRIG_RANGE then
-            trig = true
-            break
-          end
-        end
-
-        -- Draw trigger
-        if trig then
-          screen.rect(util.round(trig_x) - 2.5, util.round(trig_y) - 2.5, 4, 4)
-          screen.stroke()
-        else
-          screen.rect(util.round(trig_x) - 1, util.round(trig_y) - 1, 2, 2)
-          screen.fill()
-        end
-
+    
+    for _, t in ipairs(triggers) do
+      if t.active then
+        screen.rect(t.screen_x - 2.5, t.screen_y - 2.5, 4, 4)
+        screen.stroke()
+      else
+        screen.rect(t.screen_x - 1, t.screen_y - 1, 2, 2)
+        screen.fill()
       end
+
     end
 
   end
