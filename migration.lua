@@ -17,8 +17,8 @@ local update_metro
 local slice_index = 1
 local bird_data = {}
 
-local NUM_VIEW_MODES = 3
-local view_mode = 1 -- Map, Stats, Bounds
+local NUM_VIEW_MODES = 4
+local view_mode = 1-- Map, Stats, Bounds, Triggers
 
 local specs = {}
 specs.SPEED = ControlSpec.new(0.1, 4, "exp", 0, 0.25, "")
@@ -187,33 +187,45 @@ function redraw()
   if view_mode == 1 then map_level = 15 end
   draw_map(current_slice().points, map_level)
 
+  -- Map view
+  if view_mode == 1 then
+
+    -- Top left text
+    screen.level(15)
+    screen.move(2, 7)
+    screen.text(params:string("species"))
+    screen.level(3)
+    screen.move(2, 16)
+    screen.text(current_slice().year .. " " .. current_slice().week)
+    screen.fill()
+
   -- Stats view
-  if view_mode == 2 then
+  elseif view_mode == 2 then
 
     screen.level(15)
 
     -- Area
     local norm_area = util.linlin(current_bird().min_area, current_bird().max_area, 0, 1, current_slice().area)
-    screen.move(2, 30)
+    screen.move(2, 21)
     screen.text("Area")
     screen.fill()
-    screen.rect(40, 27, util.round(norm_area * 76),  2)
+    screen.rect(40, 18, util.round(norm_area * 76),  2)
     screen.fill()
 
     -- Mass
     local norm_mass = util.linlin(current_bird().min_points, current_bird().max_points, 0, 1, current_slice().num_points)
-    screen.move(2, 39)
+    screen.move(2, 30)
     screen.text("Mass")
     screen.fill()
-    screen.rect(40, 36, util.round(norm_mass * 76),  2)
+    screen.rect(40, 27, util.round(norm_mass * 76),  2)
     screen.fill()
 
     -- Density
     local norm_density = util.linlin(current_bird().min_density, current_bird().max_density, 0, 1, current_slice().density)
-    screen.move(2, 48)
+    screen.move(2, 39)
     screen.text("Density")
     screen.fill()
-    screen.rect(40, 45, util.round(norm_density * 76),  2)
+    screen.rect(40, 36, util.round(norm_density * 76),  2)
     screen.fill()
 
   -- Bounds view
@@ -238,20 +250,51 @@ function redraw()
       screen.fill()
     end
 
+  -- Triggers view
+  elseif view_mode == 4 then
+
+    local TRIG_RANGE = 3 -- LatLong Degrees
+    local NUM_COLS = 6
+    local NUM_ROWS = 3
+
+    screen.level(15)
+    for c = 1, NUM_COLS do
+      for r = 1, NUM_ROWS do
+
+        -- TODO move some of this outside loop
+        -- TODO General cleanup of trigger code?
+        local trig_x_ll = c * ((current_bird().max_x - current_bird().min_x) / (NUM_COLS + 1)) + current_bird().min_x
+        local trig_y_ll = r * ((current_bird().max_y - current_bird().min_y) / (NUM_ROWS + 1)) + current_bird().min_y
+        local trig_x, trig_y = normalize_point(trig_x_ll, trig_y_ll)
+        trig_x = trig_x * 128
+        trig_y = (1 - trig_y) * 64
+
+        -- Detect trigger
+        local trig = false
+        for _, p in ipairs(current_slice().points) do
+          if p.x > trig_x_ll - TRIG_RANGE and p.x < trig_x_ll + TRIG_RANGE and p.y > trig_y_ll - TRIG_RANGE and p.y < trig_y_ll + TRIG_RANGE then
+            trig = true
+            break
+          end
+        end
+
+        -- Draw trigger
+        if trig then
+          screen.rect(util.round(trig_x) - 2.5, util.round(trig_y) - 2.5, 4, 4)
+          screen.stroke()
+        else
+          screen.rect(util.round(trig_x) - 1, util.round(trig_y) - 1, 2, 2)
+          screen.fill()
+        end
+
+      end
+    end
+
   end
 
   -- Progress
   screen.level(3)
   screen.rect(0, 63, util.round(util.linlin(1, current_bird().num_slices, 0, 128, slice_index)), 1)
-  screen.fill()
-
-  -- Top left text
-  screen.level(15)
-  screen.move(2, 7)
-  screen.text(params:string("species"))
-  screen.level(3)
-  screen.move(2, 16)
-  screen.text(current_slice().year .. " " .. current_slice().week)
   screen.fill()
 
   screen.update()
