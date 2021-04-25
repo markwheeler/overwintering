@@ -18,10 +18,10 @@ local slice_index = 1
 local bird_data = {}
 
 local NUM_VIEW_MODES = 3
-local view_mode = 3 -- Map, Stats, Bounds
+local view_mode = 1 -- Map, Stats, Bounds
 
 local specs = {}
-specs.SPEED = ControlSpec.new(0.1, 4, "exp", 0, 0.5, "")
+specs.SPEED = ControlSpec.new(0.1, 4, "exp", 0, 0.25, "")
 
 
 -- Functions
@@ -168,23 +168,13 @@ local function draw_map(points, level)
   -- screen.aa(0)
 
   screen.level(level)
-  -- screen.level(15)
-  -- for _, c in ipairs(current_slice().clusters) do
-    for _, p in ipairs(current_slice().points) do
-      if p.cluster_id % 2 == 0 then
-        screen.level(15)
-      else
-        screen.level(3)
-      end
-      local nx, ny = normalize_point(p.x, p.y)
-      screen.rect(nx * 128 - 0.5, 64 - ny * 64 - 0.5, 1, 1)
-      screen.fill()
-    end
-    -- screen.level(3)
-  -- end
+  for _, p in ipairs(current_slice().points) do
+    local nx, ny = normalize_point(p.x, p.y)
+    screen.rect(nx * 128 - 0.5, 64 - ny * 64 - 0.5, 1, 1)
+    screen.fill()
+  end
 
   -- screen.aa(1)
-
 end
 
 function redraw()
@@ -196,6 +186,59 @@ function redraw()
   local map_level = 3
   if view_mode == 1 then map_level = 15 end
   draw_map(current_slice().points, map_level)
+
+  -- Stats view
+  if view_mode == 2 then
+
+    screen.level(15)
+
+    -- Area
+    local norm_area = util.linlin(current_bird().min_area, current_bird().max_area, 0, 1, current_slice().area)
+    screen.move(2, 30)
+    screen.text("Area")
+    screen.fill()
+    screen.rect(40, 27, util.round(norm_area * 76),  2)
+    screen.fill()
+
+    -- Mass
+    local norm_mass = util.linlin(current_bird().min_points, current_bird().max_points, 0, 1, current_slice().num_points)
+    screen.move(2, 39)
+    screen.text("Mass")
+    screen.fill()
+    screen.rect(40, 36, util.round(norm_mass * 76),  2)
+    screen.fill()
+
+    -- Density
+    local norm_density = util.linlin(current_bird().min_density, current_bird().max_density, 0, 1, current_slice().density)
+    screen.move(2, 48)
+    screen.text("Density")
+    screen.fill()
+    screen.rect(40, 45, util.round(norm_density * 76),  2)
+    screen.fill()
+
+  -- Bounds view
+  elseif view_mode == 3 then
+
+    -- Slice bounds
+    screen.level(3)
+    n_min_x, n_min_y = normalize_point(current_slice().min_x, current_slice().min_y)
+    n_max_x, n_max_y = normalize_point(current_slice().max_x, current_slice().max_y)
+    screen.rect(math.floor(n_min_x * 128) - 0.5, 64 - math.floor(n_max_y * 64) - 0.5, math.ceil((n_max_x - n_min_x) * 128) + 1,  math.ceil((n_max_y - n_min_y) * 64) + 1)
+    screen.stroke()
+
+    -- Cluster centroids
+    screen.level(15)
+    for _, c in ipairs(current_slice().clusters) do
+      local norm_x, norm_y = normalize_point(c.centroid.x, c.centroid.y)
+      screen.rect(util.round(norm_x * 128) - 2.5, util.round(64 - norm_y * 64) - 2.5, 4, 4)
+      screen.stroke()
+      -- Note: Storing number of points per cluster but probably need to normalize if using
+      -- screen.move(util.round(norm_x * 128) + 4, util.round(64 - norm_y * 64) + 2)
+      -- screen.text(c.num_points)
+      screen.fill()
+    end
+
+  end
 
   -- Progress
   screen.level(3)
@@ -210,41 +253,6 @@ function redraw()
   screen.move(2, 16)
   screen.text(current_slice().year .. " " .. current_slice().week)
   screen.fill()
-
-  -- Stats view
-  if view_mode == 2 then
-
-    -- Mass
-    local norm_mass = util.linlin(current_bird().min_points, current_bird().max_points, 0, 1, current_slice().num_points)
-    screen.level(15)
-    screen.move(2, 30)
-    screen.text("Mass")
-    screen.fill()
-    screen.rect(40, 27, util.round(norm_mass * 76),  2)
-    screen.fill()
-
-    -- Density
-    -- TODO normalize?
-    
-    screen.level(15)
-    screen.move(2, 39)
-    screen.text("Density")
-    screen.fill()
-    screen.rect(40, 36, util.round(util.linlin(current_bird().min_density, current_bird().max_density, 0, 76, current_slice().density)),  2)
-    screen.fill()
-
-  -- Bounds view
-  elseif view_mode == 3 then
-
-    -- Slice bounds
-    -- screen.level(15)
-    -- n_min_x, n_min_y = normalize_point(current_slice().min_x, current_slice().min_y)
-    -- n_max_x, n_max_y = normalize_point(current_slice().max_x, current_slice().max_y)
-    -- screen.rect(math.floor(n_min_x * 128) - 0.5, 64 - math.floor(n_max_y * 64) - 0.5, math.ceil((n_max_x - n_min_x) * 128) + 1,  math.ceil((n_max_y - n_min_y) * 64) + 1)
-    -- screen.stroke()
-
-
-  end
 
   screen.update()
 end
