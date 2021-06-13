@@ -310,7 +310,7 @@ function redraw()
 
   -- Progress
   screen.level(3)
-  screen.rect(0, 63, util.round(util.linlin(1, current_bird().num_slices, 0, 128, slice_index)), 1)
+  screen.rect(0, 63, util.linlin(1, current_bird().num_slices, 0, 128, slice_index), 1)
   screen.fill()
 
   screen.update()
