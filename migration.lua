@@ -231,7 +231,7 @@ local function play_perc(index)
 
     -- TODO refine logic
     -- Maybe use trigger position etc via trigger_index
-    local note_num = math.random(current_sonic_def().musical_scale[1] + 24, current_sonic_def().musical_scale[1] + 36)
+    local note_num = math.random(current_sonic_def().musical_scale[1] + 36, current_sonic_def().musical_scale[1] + 48)
     note_num = MusicUtil.snap_note_to_array(note_num, current_sonic_def().musical_scale)
     
     engine.percOn(

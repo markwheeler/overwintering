@@ -13,14 +13,14 @@ local specs = {}
 
 specs.DETUNE_VARIANCE = ControlSpec.UNIPOLAR
 specs.CONTROL_LAG = ControlSpec.new(0, 2, "lin", 0, 0.5, "s")
-specs.AMP = ControlSpec.new(0, 11, "lin", 0, 0.5, "")
+specs.AMP = ControlSpec.new(0, 11, "lin", 0, 0.5)
 specs.AMP_MOD_LFO = ControlSpec.UNIPOLAR
 specs.FREQ_MOD_ENV = ControlSpec.BIPOLAR
 specs.FREQ_MOD_LFO = ControlSpec.UNIPOLAR
 specs.OSC_WAVE_SHAPE = ControlSpec.UNIPOLAR
 specs.OSC_WAVE_SHAPE_MOD_ENV = ControlSpec.BIPOLAR
 specs.OSC_WAVE_SHAPE_MOD_LFO = ControlSpec.UNIPOLAR
-specs.OSC_LEVEL = ControlSpec.UNIPOLAR
+specs.OSC_LEVEL = ControlSpec.new(0, 1, "lin", 0, 1)
 specs.NOISE_LEVEL = ControlSpec.UNIPOLAR
 specs.LP_FILTER_CUTOFF = ControlSpec.new(20, 20000, "exp", 0, 800, "Hz")
 specs.LP_FILTER_CUTOFF_MOD_ENV = ControlSpec.BIPOLAR
