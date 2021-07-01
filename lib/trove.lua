@@ -194,6 +194,20 @@ local function load_csv(file_path)
 
 end
 
+
+function Trove.get_bird(bird_index)
+  return Trove.bird_data[bird_index]
+end
+
+function Trove.get_slice(bird_index, slice_index)
+  slice_index = util.wrap(slice_index, 1, Trove.get_bird(bird_index).num_slices)
+  return Trove.get_bird(bird_index).slices[slice_index]
+end
+
+function Trove.interp_slice_value(bird_index, start_slice_index, end_slice_index, progress, value_name)
+  return util.linlin(0, 1, Trove.get_slice(bird_index, start_slice_index)[value_name], Trove.get_slice(bird_index, end_slice_index)[value_name], progress)
+end
+
 function Trove.load_folder(folder_path)
 
   local files = util.scandir(folder_path)
