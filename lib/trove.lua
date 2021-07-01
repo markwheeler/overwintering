@@ -1,51 +1,19 @@
 local Trove = {}
 
+Trove.MAX_NUM_CLUSTERS = 4
 Trove.bird_data = {}
 
 local Clustering = include("lib/clustering")
 
+function Trove.normalize_point(x, y, bird_x_offset, bird_y_offset, bird_scale)
+  x = util.linlin(-180, 180, 0, 1, (x - bird_x_offset) * bird_scale)
+  y = util.linlin(-90, 90, 0, 1, (y - bird_y_offset) * bird_scale)
+  return x, y
+end
 
 local function process_bird(bird)
 
   print("Processing bird...")
-
-  for _, s in ipairs(bird.slices) do
-
-    -- Calculate area
-    s.area = (s.max_x - s.min_x) * (s.max_y - s.min_y)
-    if s.area < bird.min_area then bird.min_area = s.area end
-    if s.area > bird.max_area then bird.max_area = s.area end
-
-    -- Calculate density
-    s.density = s.num_points / s.area
-    if s.density < bird.min_density then bird.min_density = s.density end
-    if s.density > bird.max_density then bird.max_density = s.density end
-
-    -- Calculate clusters
-    -- Note: Could be smarter about estimating number of clusters but just basing on number points for now
-    local num_clusters = util.round(util.linlin(bird.min_points, bird.max_points, 2, 4, s.num_points))
-    local centers, point_clusters, loss = Clustering.kmeans(s.points, num_clusters, "kmeans++")
-
-    -- Store centroids and number points per cluster
-    for i = 1, num_clusters do
-      local cluster = {
-        centroid = centers[i],
-        num_points = 0
-      }
-      for _, v in ipairs(point_clusters) do
-        if v == i then
-          cluster.num_points = cluster.num_points + 1
-        end
-      end
-      table.insert(s.clusters, cluster)
-    end
-
-    -- No current need to assign points to clusters
-    -- for i = 1, #s.points do
-    --   s.points[i].cluster_id = cluster[i]
-    -- end
-
-  end
 
   -- Generate values for easy scaling/centering later
 
@@ -56,6 +24,74 @@ local function process_bird(bird)
   bird.x_offset = bird.x_range / 2 + bird.min_x
   bird.y_offset = bird.y_range / 2 + bird.min_y
 
+  local min_cluster_points, max_cluster_points = 9999999, 0
+
+  for _, s in ipairs(bird.slices) do
+
+    -- Calculate normalized points
+    for _, p in ipairs(s.points) do
+      p.x_norm, p.y_norm = Trove.normalize_point(p.x, p.y, bird.x_offset, bird.y_offset, bird.scale)
+    end
+
+    s.min_x_norm, s.min_y_norm = Trove.normalize_point(s.min_x, s.min_y, bird.x_offset, bird.y_offset, bird.scale)
+    s.max_x_norm, s.max_y_norm = Trove.normalize_point(s.max_x, s.max_y, bird.x_offset, bird.y_offset, bird.scale)
+
+    -- Calculate normalized num_points
+    s.num_points_norm = util.linlin(bird.min_points, bird.max_points, 0, 1, s.num_points)
+
+    -- Calculate area
+    s.area = (s.max_x - s.min_x) * (s.max_y - s.min_y)
+    if s.area < bird.min_area then bird.min_area = s.area end
+    if s.area > bird.max_area then bird.max_area = s.area end
+    s.area_norm = util.linlin(bird.min_area, bird.max_area, 0, 1, s.area)
+
+    -- Calculate density
+    s.density = s.num_points / s.area
+    if s.density < bird.min_density then bird.min_density = s.density end
+    if s.density > bird.max_density then bird.max_density = s.density end
+    s.density_norm = util.linlin(bird.min_density, bird.max_density, 0, 1, s.density)
+
+    -- Calculate clusters
+    -- Note: Could be smarter about estimating number of clusters but just basing on number points for now
+    local num_clusters = util.round(util.linlin(bird.min_points, bird.max_points, 2, Trove.MAX_NUM_CLUSTERS, s.num_points))
+    local centers, point_clusters, loss = Clustering.kmeans(s.points, num_clusters, "kmeans++")
+
+    -- Store centroids and number points per cluster
+    for i = 1, num_clusters do
+      local cluster = {
+        centroid = centers[i],
+        num_points = 0
+      }
+      cluster.centroid.x_norm, cluster.centroid.y_norm = Trove.normalize_point(centers[i].x, centers[i].y, bird.x_offset, bird.y_offset, bird.scale)
+      for _, v in ipairs(point_clusters) do
+        if v == i then
+          cluster.num_points = cluster.num_points + 1
+        end
+      end
+      if cluster.num_points < min_cluster_points then min_cluster_points = cluster.num_points end
+      if cluster.num_points > max_cluster_points then max_cluster_points = cluster.num_points end
+      table.insert(s.clusters, cluster)
+    end
+
+    -- Sort clusters by y position
+    table.sort(s.clusters, function(a, b)
+      return a.centroid.y_norm > b.centroid.y_norm
+    end)
+
+    -- No current need to assign points to clusters
+    -- for i = 1, #s.points do
+    --   s.points[i].cluster_id = cluster[i]
+    -- end
+
+  end
+
+  -- Store normalized num_points per cluster
+  for _, s in ipairs(bird.slices) do
+    for _, c in ipairs(s.clusters) do
+      c.num_points_norm = util.linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points)
+    end
+  end
+
   return bird
 end
 
@@ -64,6 +100,7 @@ local function load_csv(file_path)
   print("Adding bird...")
 
   local bird = {
+    id = file_path:match("^.+/(.+)%..+"),
     name = "Name",
     latin_name = "Latin name",
     slices = {},
@@ -124,8 +161,6 @@ local function load_csv(file_path)
       local point = {
         x = tonumber(split[1]),
         y = tonumber(split[2]),
-        norm_x = 0,
-        norm_y = 0
       }
       table.insert(bird.slices[bird.num_slices].points, point)
       slice.num_points = slice.num_points + 1
