@@ -25,7 +25,7 @@ local NUM_VIEW_MODES = 4
 local view_mode = 1-- Map, Stats, Clusters, Triggers
 
 local specs = {}
-specs.TIME = ControlSpec.new(1, 12, "lin", 0, 8, "s")
+specs.TIME = ControlSpec.new(1, 12, "lin", 0, 4.5, "s")
 
 
 -- Functions

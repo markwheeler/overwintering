@@ -12,17 +12,17 @@ function StatsView.redraw(area, mass, density)
   screen.fill()
 
   -- Mass
-  screen.move(2, 30)
+  screen.move(2, 32)
   screen.text("Mass")
   screen.fill()
-  screen.rect(40, 27, mass * 76,  2)
+  screen.rect(40, 29, mass * 76,  2)
   screen.fill()
 
   -- Density
-  screen.move(2, 39)
+  screen.move(2, 43)
   screen.text("Density")
   screen.fill()
-  screen.rect(40, 36, density * 76,  2)
+  screen.rect(40, 40, density * 76,  2)
   screen.fill()
 end
 

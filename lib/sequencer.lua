@@ -3,7 +3,7 @@ local Sequencer = {}
 local MusicUtil = require "musicutil"
 local SonicDefs = include("lib/sonic_defs")
 
-Sequencer.STEPS_PER_SLICE = 64
+Sequencer.STEPS_PER_SLICE = 96
 
 Sequencer.screen_dirty_callback = function() end
 Sequencer.slice_index = 1
@@ -15,6 +15,7 @@ local Trove = {}
 local sonic_def = {}
 local bird_index = 1
 local num_slices = 0
+local chord_notes = {}
 local perc_notes_this_slice = {}
 local perc_steps_this_slice = 0
 
@@ -32,6 +33,8 @@ local function generate_triggers(bird_index)
   local trig_x_spacing = (bird.max_x - bird.min_x) / (TRIG_COLS + 1)
   local trig_y_spacing = (bird.max_y - bird.min_y) / (TRIG_ROWS + 1)
 
+  local min_distance, max_distance = 999999, 0
+
   for c = 1, TRIG_COLS do
     for r = 1, TRIG_ROWS do
 
@@ -39,16 +42,42 @@ local function generate_triggers(bird_index)
       trig.active = false
       trig.x = c * trig_x_spacing + bird.min_x
       trig.y = r * trig_y_spacing + bird.min_y
-      trig.screen_x, trig.screen_y = Trove.normalize_point(trig.x, trig.y, bird.x_offset, bird.y_offset, bird.scale)
-      trig.screen_x = util.round(trig.screen_x * 128)
-      trig.screen_y = util.round((1 - trig.screen_y) * 64)
+      trig.x_norm, trig.y_norm = Trove.normalize_point(trig.x, trig.y, bird.x_offset, bird.y_offset, bird.scale)
+      trig.x_grid_norm = util.linlin(1, TRIG_COLS, 0, 1, c)
+      trig.y_grid_norm = util.linlin(1, TRIG_ROWS, 1, 0, r)
+      trig.screen_x = util.round(trig.x_norm * 128)
+      trig.screen_y = util.round((1 - trig.y_norm) * 64)
+
+      -- Calculate distance from perc_start
+      local x_diff, y_diff = math.abs(trig.x_norm - sonic_def.perc_start_x), math.abs((1 - trig.y_norm) * 0.5 - sonic_def.perc_start_y)
+      trig.distance_from_root = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
+      if trig.distance_from_root < min_distance then min_distance = trig.distance_from_root end
+      if trig.distance_from_root > max_distance then max_distance = trig.distance_from_root end
+
       table.insert(Sequencer.triggers, trig)
 
     end
   end
+
+  -- Normalize distances
+  for _, t in ipairs(Sequencer.triggers) do
+    t.distance_from_root  = util.linlin(min_distance, max_distance, 0, 1, t.distance_from_root)
+  end
+
 end
 
 local function update_triggers()
+
+  -- Sort to expand/contract
+  local week = Trove.get_slice(bird_index, Sequencer.slice_index).week
+  table.sort(Sequencer.triggers, function(a, b)
+    if week >= sonic_def.contract_range[1] and week <= sonic_def.contract_range[2] then
+      return a.distance_from_root > b.distance_from_root
+    else
+      return a.distance_from_root < b.distance_from_root
+    end
+  end)
+
   -- TODO Perf test
   Sequencer.num_active_triggers = 0
   for _, t in ipairs(Sequencer.triggers) do
@@ -66,7 +95,7 @@ end
 
 local function play_chord()
 
-  local notes = {}
+  chord_notes = {}
   local osc_mods = {}
   for i = 1, Trove.MAX_NUM_CLUSTERS do osc_mods[i] = 0 end
 
@@ -84,32 +113,32 @@ local function play_chord()
 
     if i == 1 then
       for n = 1, Trove.MAX_NUM_CLUSTERS do
-        notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
+        chord_notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
       end
     else
-      notes[i] = notes[i - 1] + interval
+      chord_notes[i] = chord_notes[i - 1] + interval
     end
     osc_mods[i] = clusters[i].num_points_norm
 
     prev_x, prev_y = current_x, current_y
   end
   
-  notes = MusicUtil.snap_notes_to_array(notes, sonic_def.musical_scale)
+  chord_notes = MusicUtil.snap_notes_to_array(chord_notes, sonic_def.musical_scale)
 
   -- Iterate the scale and remove any intervals of < 3 ST
-  for i = 2, #notes do
-    if notes[i] - notes[i - 1] < 3 then
-      notes[i] = notes[i - 1] - 12
+  for i = 2, #chord_notes do
+    if chord_notes[i] - chord_notes[i - 1] < 3 then
+      chord_notes[i] = chord_notes[i - 1] - 12
     end
   end
 
   print("--- chordOn")
-  for i = 1, #notes do
-    print(notes[i], MusicUtil.note_num_to_name(notes[i], true), util.round(osc_mods[i], 0.01))
+  for i = 1, #chord_notes do
+    print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
   end
   print("---")
 
-  local note_freqs = MusicUtil.note_nums_to_freqs(notes)
+  local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
   engine.chordOn(
     math.floor(Sequencer.slice_index), -- voiceId
@@ -150,6 +179,8 @@ local function generate_perc_notes()
 
   if Sequencer.num_active_triggers < 8 then
     perc_steps_this_slice = 8
+  elseif Sequencer.num_active_triggers < 12 then
+    perc_steps_this_slice = 12
   elseif Sequencer.num_active_triggers < 16 then
     perc_steps_this_slice = 16
   elseif Sequencer.num_active_triggers < 32 then
@@ -164,9 +195,14 @@ local function generate_perc_notes()
     end
   end
 
-  -- Insert pauses randomly
+  -- Insert rests randomly
+  -- while #perc_notes_this_slice < perc_steps_this_slice do
+  --   table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
+  -- end
+
+  -- Insert rests at end of slice
   while #perc_notes_this_slice < perc_steps_this_slice do
-    table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
+    table.insert(perc_notes_this_slice, 0)
   end
 
   print("---- perc_notes_this_slice")
@@ -181,14 +217,22 @@ local function play_perc(index)
 
   if trigger_index > 0 then
 
-    -- Play note
-    print("percOn", index, trigger_index)
-
-    -- TODO refine logic
-    -- Maybe use trigger position etc via trigger_index
-    local note_num = math.random(sonic_def.musical_scale[1] + 36,sonic_def.musical_scale[1] + 48)
+    -- Trigger distance from perc_start to note
+    local note_num = util.linlin(0, 1, chord_notes[1] + 12, chord_notes[1] + 24, Sequencer.triggers[trigger_index].distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
-    
+    print(util.round(Sequencer.triggers[trigger_index].distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
+
+    local dyn_params = sonic_def.dynamic_params
+
+    -- Num triggers to env_release, delay_send and lp_filter_cutoff
+    local num_triggers_norm = Sequencer.num_active_triggers / (TRIG_COLS * TRIG_ROWS)
+    params:set("perc_env_release", util.linlin(0, 1, dyn_params.perc_env_release_low, dyn_params.perc_env_release_high, num_triggers_norm))
+    params:set("perc_delay_send", util.linlin(0, 1, dyn_params.perc_delay_send_high, dyn_params.perc_delay_send_low, num_triggers_norm))
+    params:set("perc_lp_filter_cutoff", util.linlin(0, 1, dyn_params.perc_lp_filter_cutoff_low, dyn_params.perc_lp_filter_cutoff_high, num_triggers_norm))
+
+    -- Trig x position to panning
+    params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, Sequencer.triggers[trigger_index].x_grid_norm))
+
     engine.percOn(
       math.floor(trigger_index), -- voiceId
       MusicUtil.note_num_to_freq(note_num), -- freq
@@ -196,6 +240,7 @@ local function play_perc(index)
       util.linlin(0, 1, 0.4, 1, math.random()), -- vel
       params:get("perc_amp"),
       params:get("perc_amp_mod_lfo"),
+      params:get("perc_panning"),
       params:get("perc_freq_mod_env"),
       params:get("perc_freq_mod_lfo"),
       params:get("perc_osc_wave_shape"),
@@ -245,7 +290,9 @@ function Sequencer.update()
 
   -- Play perc (passes index of perc step)
   if Sequencer.num_active_triggers > 0 and (Sequencer.step_index - 1) % (Sequencer.STEPS_PER_SLICE / perc_steps_this_slice) == 0 then
-    play_perc(math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1))
+    local perc_index = math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1)
+    -- perc_index = util.wrap(perc_index, 1, #perc_notes_this_slice) -- Required when not filling out the slices with rests
+    play_perc(perc_index)
   end
 
   Sequencer.screen_dirty_callback()

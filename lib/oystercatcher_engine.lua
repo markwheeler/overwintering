@@ -15,6 +15,7 @@ specs.DETUNE_VARIANCE = ControlSpec.UNIPOLAR
 specs.CONTROL_LAG = ControlSpec.new(0, 2, "lin", 0, 0.5, "s")
 specs.AMP = ControlSpec.new(0, 11, "lin", 0, 0.5)
 specs.AMP_MOD_LFO = ControlSpec.UNIPOLAR
+specs.PANNING = ControlSpec.BIPOLAR
 specs.FREQ_MOD_ENV = ControlSpec.BIPOLAR
 specs.FREQ_MOD_LFO = ControlSpec.UNIPOLAR
 specs.OSC_WAVE_SHAPE = ControlSpec.UNIPOLAR
@@ -38,7 +39,7 @@ specs.CHORUS_SEND = ControlSpec.UNIPOLAR
 specs.DELAY_SEND = ControlSpec.UNIPOLAR
 
 specs.LFO_FREQ = ControlSpec.new(0.1, 10, 'exp', 0, 4, "Hz")
-specs.AUDIO_RATE_LFO_FREQ = ControlSpec.new(20, 20000, 'exp', 0, 4, "Hz")
+specs.AUDIO_RATE_LFO_FREQ = ControlSpec.new(0.1, 1000, 'exp', 0, 4, "Hz")
 
 specs.DELAY_TIME = ControlSpec.new(0, 4, "lin", 0, 0.25, "s")
 specs.DELAY_MOD_FREQ = ControlSpec.new(0, 2, "lin", 0, 0.2)
@@ -112,6 +113,7 @@ function Oystercatcher.add_perc_params()
   params:add{type = "control", id = "perc_env_release", name = "Env Release", controlspec = specs.ENV_RELEASE}
   params:add{type = "control", id = "perc_amp", name = "Amp", controlspec = specs.AMP}
   params:add{type = "control", id = "perc_amp_mod_lfo", name = "Amp Mod: LFO", controlspec = specs.AMP_MOD_LFO}
+  params:add{type = "control", id = "perc_panning", name = "Panning", controlspec = specs.PANNING}
 
   params:add{type = "control", id = "perc_lfo_freq", name = "LFO Freq", controlspec = specs.AUDIO_RATE_LFO_FREQ}
 

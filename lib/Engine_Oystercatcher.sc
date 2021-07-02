@@ -190,7 +190,7 @@ Engine_Oystercatcher : CroneEngine {
 
 		// Perc voice
 		SynthDef(\percVoice, {
-			arg out, freq = 440.0, gate = 0, killGate = 1, detuneVariance = 0, vel = 1.0, amp = 1, ampModLfo = 0,
+			arg out, freq = 440.0, gate = 0, killGate = 1, detuneVariance = 0, vel = 1.0, amp = 1, ampModLfo = 0, panning = 0,
 			freqModEnv = 0, freqModLfo = 0,
 			oscWaveShape = 0, oscWaveShapeModEnv = 0, oscWaveShapeModLfo = 0, oscLevel = 1, noiseLevel = 0, crackleLevel = 0,
 			lpFilterCutoff = 2000, lpFilterCutoffModEnv = 0, lpFilterCutoffModLfo = 0, lpFilterResonance = 0.2,
@@ -248,8 +248,8 @@ Engine_Oystercatcher : CroneEngine {
 			// Amp
 			signal = signal * envelope * vel * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1) * 0.7;
 
-			// TODO Panning
-			signal = signal.dup;
+			// Panning
+			signal = Pan2.ar(signal, panning);
 
 			// Sends
 			Out.ar(chorusBus, signal * chorusSend);
@@ -396,14 +396,14 @@ Engine_Oystercatcher : CroneEngine {
 		// lpFilterCutoff, lpFilterCutoffModEnv, lpFilterCutoffModLfo, lpFilterResonance,
 		// envAttack, envRelease, lfoFreq, chorusSend, delaySend)
 
-		this.addCommand(\percOn, "iffffffffffffffffffffff", {
+		this.addCommand(\percOn, "ifffffffffffffffffffffff", {
 			arg msg;
-			var id = msg[1], freq = msg[2], detuneVariance = msg[3], vel = msg[4] ?? 1, amp = msg[5] ?? 1, ampModLfo = msg[6],
-			freqModEnv = msg[7], freqModLfo = msg[8],
-			oscWaveShape = msg[9], oscWaveShapeModEnv = msg[10], oscWaveShapeModLfo = msg[11],
-			oscLevel = msg[12], noiseLevel = msg[13], crackleLevel = msg[14],
-			lpFilterCutoff = msg[15] ?? 2000, lpFilterCutoffModEnv = msg[16], lpFilterCutoffModLfo = msg[17], lpFilterResonance = msg[18],
-			envAttack = msg[19] ?? 0.1, envRelease = msg[20] ?? 0.5, lfoFreq = msg[21] ?? 20, chorusSend = msg[22], delaySend = msg[23];
+			var id = msg[1], freq = msg[2], detuneVariance = msg[3], vel = msg[4] ?? 1, amp = msg[5] ?? 1, ampModLfo = msg[6], panning = msg[7],
+			freqModEnv = msg[8], freqModLfo = msg[9],
+			oscWaveShape = msg[10], oscWaveShapeModEnv = msg[11], oscWaveShapeModLfo = msg[12],
+			oscLevel = msg[13], noiseLevel = msg[14], crackleLevel = msg[15],
+			lpFilterCutoff = msg[16] ?? 2000, lpFilterCutoffModEnv = msg[17], lpFilterCutoffModLfo = msg[18], lpFilterResonance = msg[19],
+			envAttack = msg[20] ?? 0.1, envRelease = msg[21] ?? 0.5, lfoFreq = msg[22] ?? 20, chorusSend = msg[23], delaySend = msg[24];
 			var voiceToRemove, newVoice;
 
 			// Remove voice if ID matches or there are too many
@@ -427,6 +427,7 @@ Engine_Oystercatcher : CroneEngine {
 					\vel, vel.linlin(0, 1, 0.3, 1),
 					\amp, amp,
 					\ampModLfo, ampModLfo,
+					\panning, panning,
 					\freqModEnv, freqModEnv,
 					\freqModLfo, freqModLfo,
 					\oscWaveShape, oscWaveShape,
