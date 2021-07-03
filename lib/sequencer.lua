@@ -50,8 +50,8 @@ local function generate_triggers(bird_index)
       trig.x_norm, trig.y_norm = Trove.normalize_point(trig.x, trig.y, bird.x_offset, bird.y_offset, bird.scale)
       trig.x_grid_norm = util.linlin(1, TRIG_COLS, 0, 1, c)
       trig.y_grid_norm = util.linlin(1, TRIG_ROWS, 1, 0, r)
-      trig.screen_x = util.round(trig.x_norm * 128)
-      trig.screen_y = util.round((1 - trig.y_norm) * 64)
+      trig.screen_x = util.round(trig.x_norm * 126 + 1)
+      trig.screen_y = util.round((1 - trig.y_norm) * 62 + 1)
       trig.mod_a = util.linlin(1, TRIG_COLS * TRIG_ROWS, 0, 1, (r - 1 ) * TRIG_COLS + c)
       trig.mod_b = util.linlin(1, TRIG_COLS * TRIG_ROWS, 1, 0, (c - 1 ) * TRIG_ROWS + r)
 
@@ -228,7 +228,8 @@ local function play_perc(index)
     -- print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
 
     -- Velocity varies with pitch
-    local velocity = util.linlin(note_range[1], note_range[2], 0.8, 0.4, note_num) + util.linlin(0, 1, 0, 0.2, math.random())
+    local velocity = util.linlin(note_range[1], note_range[2], 0.8, 0.4, note_num)
+    velocity = velocity + math.random() * 0.2
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
@@ -397,6 +398,11 @@ end
 
 function Sequencer.init(trove)
   Trove = trove
+end
+
+function Sequencer.startup()
+  step_changed()
+  slice_changed()
 end
 
 return Sequencer

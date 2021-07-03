@@ -8,7 +8,7 @@ SonicDefs.bomgar = {
   musical_scale = MusicUtil.generate_scale(33, "Major", 8), -- A0
 
   -- Defines where the roots are measured from
-  chord_start_x = 0.5, -- 0 is let, 1 is right
+  chord_start_x = 0.5, -- 0 is left, 1 is right
   chord_start_y = 0.5, -- 0 is top, 0.5 is bottom
   perc_start_x = 0.7,
   perc_start_y = 0.2,
@@ -23,8 +23,8 @@ SonicDefs.bomgar = {
     -- Chord
     chord_osc_wave_shape_low = 1,
     chord_osc_wave_shape_high = 0.2,
-    chord_noise_level_low = 0.002,
-    chord_noise_level_high = 0.06,
+    chord_noise_level_low = 0,
+    chord_noise_level_high = 0.055,
     chord_lp_filter_cutoff_low = 500,
     chord_lp_filter_cutoff_high = 2000,
     chord_lfo_freq_low = 0.001,
@@ -39,8 +39,8 @@ SonicDefs.bomgar = {
     perc_crackle_level_high = 0.4,
     perc_env_release_low = 0.05,
     perc_env_release_high = 1,
-    perc_panning_low = -1,
-    perc_panning_high = 1,
+    perc_panning_low = -0.9,
+    perc_panning_high = 0.9,
     perc_lp_filter_cutoff_low = 400,
     perc_lp_filter_cutoff_high = 4000,
     perc_lp_filter_resonance_low = 0.1,
@@ -68,13 +68,13 @@ SonicDefs.bomgar = {
         
     chord_lp_filter_cutoff_mod_env = 0,
     chord_lp_filter_cutoff_mod_lfo = 0.05,
-    chord_lp_filter_resonance = 0,
+    chord_lp_filter_resonance = 0.3,
 
     chord_env_attack = 5,
     chord_env_decay = 2,
     chord_env_sustain = 1,
     chord_env_release = 5,
-    chord_amp = 0.8,
+    chord_amp = 1.5,
     chord_amp_mod_lfo = 0.05,
 
     chord_ring_mod_mix = 0,
@@ -99,7 +99,7 @@ SonicDefs.bomgar = {
     perc_lp_filter_cutoff_mod_lfo = 0.3,
 
     perc_env_attack = 0.02,
-    perc_amp = 0.3,
+    perc_amp = 0.4,
     perc_amp_mod_lfo = 0,
 
     perc_chorus_send = 0.3,

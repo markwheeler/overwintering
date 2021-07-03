@@ -21,9 +21,9 @@ local update_metro
 local SCREEN_FRAMERATE = 15
 local screen_dirty = true
 
-local VIEW_SLICES = 2 -- Num slices show before view cycles
+local VIEW_SLICES = 4 -- Num slices show before view cycles
 local NUM_VIEW_MODES = 4
-local view_mode = 1 -- Map, Stats, Clusters, Triggers
+local view_mode = 3 -- Map, Stats, Clusters, Triggers
 local view_countdown = VIEW_SLICES
 
 local specs = {}
@@ -149,7 +149,7 @@ function init()
   params:add {
     type = "control",
     id = "time",
-    name = "Time",
+    name = "Time Per Slice",
     controlspec = specs.TIME,
     action = function(value)
       update_metro.time = value / Sequencer.STEPS_PER_SLICE
@@ -163,6 +163,7 @@ function init()
   params:bang()
 
   -- Start metros
+  Sequencer.startup()
   metro.init(screen_update, 1 / SCREEN_FRAMERATE):start()
   update_metro:start()
 

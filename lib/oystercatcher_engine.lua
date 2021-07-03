@@ -12,7 +12,7 @@ local Oystercatcher = {}
 local specs = {}
 
 specs.DETUNE_VARIANCE = ControlSpec.UNIPOLAR
-specs.CONTROL_LAG = ControlSpec.new(0, 5, "lin", 0, 1, "s")
+specs.CONTROL_LAG = ControlSpec.new(0, 5, "lin", 0, 1.5, "s")
 specs.AMP = ControlSpec.new(0, 11, "lin", 0, 0.5)
 specs.AMP_MOD_LFO = ControlSpec.UNIPOLAR
 specs.PANNING = ControlSpec.BIPOLAR
