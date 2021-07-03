@@ -6,8 +6,9 @@ local SonicDefs = include("lib/sonic_defs")
 Sequencer.STEPS_PER_SLICE = 96
 
 Sequencer.screen_dirty_callback = function() end
+Sequencer.slice_changed_callback = function() end
 Sequencer.slice_index = 1
-Sequencer.step_index = Sequencer.STEPS_PER_SLICE
+Sequencer.step_index = 1
 Sequencer.triggers = {}
 Sequencer.num_active_triggers = 0
 
@@ -25,6 +26,8 @@ local TRIG_ROWS = 3
 local TRIG_DISPLAY_TIME = 28 -- In steps
 local trigger_positions = {}
 
+
+-- Triggers
 
 local function generate_triggers(bird_index)
 
@@ -97,6 +100,17 @@ local function update_triggers()
   end
 end
 
+local function update_trig_display()
+  for _, t in ipairs(Sequencer.triggers) do
+    if t.display_timer > 0 then
+      t.display_timer = t.display_timer - 1 / TRIG_DISPLAY_TIME
+    end
+  end
+end
+
+
+-- Notes
+
 local function play_chord()
 
   chord_notes = {}
@@ -153,44 +167,6 @@ local function play_chord()
     note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
     osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
   )
-
-end
-
-local function update_chord_and_fx_params()
-
-  local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
-  local dyn_params = sonic_def.dynamic_params
-
-  -- Area to wave shape
-  params:set(
-    "chord_osc_wave_shape",
-    util.linlin(0, 1, dyn_params.chord_osc_wave_shape_low, dyn_params.chord_osc_wave_shape_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm"))
-  )
- 
-  -- Mass to LP filter cutoff and delay feedback
-  local mass = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "num_points_norm")
-  params:set(
-    "chord_lp_filter_cutoff",
-    util.linlin(0, 1, dyn_params.chord_lp_filter_cutoff_low,dyn_params.chord_lp_filter_cutoff_high, mass)
-  )
-  params:set(
-    "fx_delay_feedback",
-    util.linlin(0, 1, dyn_params.fx_delay_feedback_high, dyn_params.fx_delay_feedback_low, mass)
-  )
-
-  -- Density to noise level
-  params:set(
-    "chord_noise_level",
-    util.linlin(0, 1, dyn_params.chord_noise_level_low, dyn_params.chord_noise_level_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm"))
-  )
-
-  -- Lower bound to LFO freq
-  params:set(
-    "chord_lfo_freq",
-    util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, 1 - Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "min_y_norm"))
-  )
-
- -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
 
 end
 
@@ -315,44 +291,65 @@ local function play_perc(index)
 end
 
 
--- Public functions
+-- Advance
 
-function Sequencer.update()
+local function step_changed()
 
-  if params:get("play") == 1 then
-    Sequencer.step_index = Sequencer.step_index + 1
-    if Sequencer.step_index > Sequencer.STEPS_PER_SLICE then
-      Sequencer.step_index = 1
-      Sequencer.slice_index = Sequencer.slice_index + 1
-      if Sequencer.slice_index > num_slices then Sequencer.slice_index = 1 end
-    end
-  end
+  -- Update chord and FX params
 
-  update_chord_and_fx_params()
+  local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
+  local dyn_params = sonic_def.dynamic_params
 
-  -- Trig display timeout
-  for _, t in ipairs(Sequencer.triggers) do
-    if t.display_timer > 0 then
-      t.display_timer = t.display_timer - 1 / TRIG_DISPLAY_TIME
-    end
-  end
+  -- Area to wave shape
+  params:set(
+    "chord_osc_wave_shape",
+    util.linlin(0, 1, dyn_params.chord_osc_wave_shape_low, dyn_params.chord_osc_wave_shape_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm"))
+  )
+ 
+  -- Mass to LP filter cutoff and delay feedback
+  local mass = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "num_points_norm")
+  params:set(
+    "chord_lp_filter_cutoff",
+    util.linlin(0, 1, dyn_params.chord_lp_filter_cutoff_low,dyn_params.chord_lp_filter_cutoff_high, mass)
+  )
+  params:set(
+    "fx_delay_feedback",
+    util.linlin(0, 1, dyn_params.fx_delay_feedback_high, dyn_params.fx_delay_feedback_low, mass)
+  )
 
-  if Sequencer.step_index == 1 then
-    play_chord()
-    update_triggers()
-    generate_perc_notes()
-  end
+  -- Density to noise level
+  params:set(
+    "chord_noise_level",
+    util.linlin(0, 1, dyn_params.chord_noise_level_low, dyn_params.chord_noise_level_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm"))
+  )
+
+  -- Lower bound to LFO freq
+  params:set(
+    "chord_lfo_freq",
+    util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, 1 - Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "min_y_norm"))
+  )
+
+ -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
 
   -- Play perc (passes index of perc step)
+
   if Sequencer.num_active_triggers > 0 and (Sequencer.step_index - 1) % (Sequencer.STEPS_PER_SLICE / perc_steps_this_slice) == 0 then
     local perc_index = math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1)
     perc_index = util.wrap(perc_index, 1, #perc_notes_this_slice) -- Required when not filling out the slices with rests
     play_perc(perc_index)
   end
 
-  Sequencer.screen_dirty_callback()
-
 end
+
+local function slice_changed()
+  play_chord()
+  update_triggers()
+  generate_perc_notes()
+  Sequencer.slice_changed_callback()
+end
+
+
+-- Public functions
 
 function Sequencer.bird_changed(index)
 
@@ -362,8 +359,8 @@ function Sequencer.bird_changed(index)
   num_slices = Trove.get_bird(bird_index).num_slices
 
   -- Set state
-  Sequencer.slice_index = num_slices
-  Sequencer.step_index = Sequencer.STEPS_PER_SLICE
+  Sequencer.slice_index = 1
+  Sequencer.step_index = 1
 
   -- Triggers
   generate_triggers(bird_index)
@@ -373,6 +370,29 @@ function Sequencer.bird_changed(index)
     params:set(k, v)
   end
 
+end
+
+function Sequencer.update()
+
+  -- Advance playback
+  if params:get("play") == 1 then
+
+    Sequencer.step_index = Sequencer.step_index + 1
+    step_changed()
+
+    if Sequencer.step_index > Sequencer.STEPS_PER_SLICE then
+
+      Sequencer.step_index = 1
+      Sequencer.slice_index = Sequencer.slice_index + 1
+      if Sequencer.slice_index > num_slices then Sequencer.slice_index = 1 end
+
+      slice_changed()
+    end
+  end
+
+  update_trig_display()
+
+  Sequencer.screen_dirty_callback()
 end
 
 function Sequencer.init(trove)

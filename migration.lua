@@ -21,8 +21,10 @@ local update_metro
 local SCREEN_FRAMERATE = 15
 local screen_dirty = true
 
+local VIEW_SLICES = 2 -- Num slices show before view cycles
 local NUM_VIEW_MODES = 4
-local view_mode = 1-- Map, Stats, Clusters, Triggers
+local view_mode = 1 -- Map, Stats, Clusters, Triggers
+local view_countdown = VIEW_SLICES
 
 local specs = {}
 specs.TIME = ControlSpec.new(1, 12, "lin", 0, 4.5, "s")
@@ -35,7 +37,7 @@ local function bird_changed()
 end
 
 
--- Metro callbacks
+-- Callbacks
 
 local function screen_update()
   if screen_dirty then
@@ -46,6 +48,17 @@ end
 
 local function screen_dirty_callback()
   screen_dirty = true
+end
+
+local function slice_changed_callback()
+  -- Cycle
+  if params:get("cycle_views") > 0 then
+    view_countdown = view_countdown - 1
+    if view_countdown <= 0 then
+      view_mode = util.wrap(view_mode + 1, 1, NUM_VIEW_MODES)
+      view_countdown = VIEW_SLICES
+    end
+  end
 end
 
 
@@ -97,6 +110,7 @@ function init()
 
   -- Init sequencer
   Sequencer.screen_dirty_callback = screen_dirty_callback
+  Sequencer.slice_changed_callback = slice_changed_callback
   Sequencer.init(Trove)
   update_metro = metro.init(Sequencer.update)
 
@@ -114,6 +128,14 @@ function init()
     name = "Species",
     options = bird_names,
     action = bird_changed
+  }
+
+  params:add {
+    type = "binary",
+    id = "cycle_views",
+    name = "Cycle Views",
+    behavior = "toggle",
+    default = 0
   }
 
   params:add {
