@@ -22,6 +22,7 @@ local perc_steps_this_slice = 0
 local TRIG_RANGE = 3 -- LatLong Degrees
 local TRIG_COLS = 6
 local TRIG_ROWS = 3
+local TRIG_DISPLAY_TIME = 28 -- In steps
 local trigger_positions = {}
 
 
@@ -40,6 +41,7 @@ local function generate_triggers(bird_index)
 
       local trig = {}
       trig.active = false
+      trig.display_timer = 0
       trig.x = c * trig_x_spacing + bird.min_x
       trig.y = r * trig_y_spacing + bird.min_y
       trig.x_norm, trig.y_norm = Trove.normalize_point(trig.x, trig.y, bird.x_offset, bird.y_offset, bird.scale)
@@ -84,7 +86,7 @@ local function update_triggers()
   Sequencer.num_active_triggers = 0
   for _, t in ipairs(Sequencer.triggers) do
     t.active = false
-    t.played = false
+    t.display_timer = 0
     for _, p in ipairs(Trove.get_slice(params:get("species"), Sequencer.slice_index).points) do
       if p.x < t.x + TRIG_RANGE and p.x > t.x - TRIG_RANGE and p.y > t.y - TRIG_RANGE and p.y < t.y + TRIG_RANGE then
         t.active = true
@@ -154,7 +156,7 @@ local function play_chord()
 
 end
 
-local function update_chord_params()
+local function update_chord_and_fx_params()
 
   local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
   local dyn_params = sonic_def.dynamic_params
@@ -165,10 +167,15 @@ local function update_chord_params()
     util.linlin(0, 1, dyn_params.chord_osc_wave_shape_low, dyn_params.chord_osc_wave_shape_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm"))
   )
  
-  -- Mass to LP filter cutoff
+  -- Mass to LP filter cutoff and delay feedback
+  local mass = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "num_points_norm")
   params:set(
     "chord_lp_filter_cutoff",
-    util.linlin(0, 1, dyn_params.chord_lp_filter_cutoff_low,dyn_params.chord_lp_filter_cutoff_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "num_points_norm"))
+    util.linlin(0, 1, dyn_params.chord_lp_filter_cutoff_low,dyn_params.chord_lp_filter_cutoff_high, mass)
+  )
+  params:set(
+    "fx_delay_feedback",
+    util.linlin(0, 1, dyn_params.fx_delay_feedback_high, dyn_params.fx_delay_feedback_low, mass)
   )
 
   -- Density to noise level
@@ -238,14 +245,19 @@ local function play_perc(index)
     local trigger = Sequencer.triggers[trigger_index]
 
     -- Trigger distance from perc_start to note
-    local note_num = util.linlin(0, 1, chord_notes[1] + 12, chord_notes[1] + 24, trigger.distance_from_root)
+    local note_range = {chord_notes[1], chord_notes[1] + 48}
+    local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
+    local sub_note_num = note_num - 5
     -- print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
+
+    -- Velocity varies with pitch
+    local velocity = util.linlin(note_range[1], note_range[2], 0.8, 0.4, note_num) + util.linlin(0, 1, 0, 0.2, math.random())
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
 
-    -- Trigger mod_a to osc and crackle levels
+    -- Trigger mod_a to osc level and crackle level
     params:set("perc_osc_level", util.linlin(0, 1, dyn_params.perc_osc_level_high, dyn_params.perc_osc_level_low, trigger.mod_a))
     params:set("perc_crackle_level", util.linlin(0, 1, dyn_params.perc_crackle_level_low, dyn_params.perc_crackle_level_high, trigger.mod_a))
 
@@ -264,11 +276,15 @@ local function play_perc(index)
     -- Trig x position to panning
     params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, trigger.x_grid_norm))
 
+    -- Trig x position to sub osc level
+    params:set("perc_sub_osc_level", util.linlin(0, 1, dyn_params.perc_sub_osc_level_low, dyn_params.perc_sub_osc_level_high, trigger.y_grid_norm))
+
     engine.percOn(
       trigger_index, -- voiceId
-      MusicUtil.note_num_to_freq(note_num), -- freq
+      MusicUtil.note_num_to_freq(note_num), -- freq0
+      MusicUtil.note_num_to_freq(sub_note_num), -- freq1
       params:get("perc_detune_variance"),
-      util.linlin(0, 1, 0.4, 1, math.random()), -- vel
+      velocity, -- vel
       params:get("perc_amp"),
       params:get("perc_amp_mod_lfo"),
       params:get("perc_panning"),
@@ -278,6 +294,7 @@ local function play_perc(index)
       params:get("perc_osc_wave_shape_mod_env"),
       params:get("perc_osc_wave_shape_mod_lfo"),
       params:get("perc_osc_level"),
+      params:get("perc_sub_osc_level"),
       params:get("perc_noise_level"),
       params:get("perc_crackle_level"),
       params:get("perc_lp_filter_cutoff"),
@@ -291,7 +308,7 @@ local function play_perc(index)
       params:get("perc_delay_send")
     )
 
-    trigger.played = true
+    trigger.display_timer = 1
 
   end
 
@@ -311,7 +328,14 @@ function Sequencer.update()
     end
   end
 
-  update_chord_params()
+  update_chord_and_fx_params()
+
+  -- Trig display timeout
+  for _, t in ipairs(Sequencer.triggers) do
+    if t.display_timer > 0 then
+      t.display_timer = t.display_timer - 1 / TRIG_DISPLAY_TIME
+    end
+  end
 
   if Sequencer.step_index == 1 then
     play_chord()

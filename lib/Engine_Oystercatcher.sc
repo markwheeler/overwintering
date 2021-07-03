@@ -193,15 +193,15 @@ Engine_Oystercatcher : CroneEngine {
 
 		// Perc voice
 		SynthDef(\percVoice, {
-			arg out, freq = 440.0, gate = 0, killGate = 1, detuneVariance = 0, vel = 1.0, amp = 1, ampModLfo = 0, panning = 0,
+			arg out, freq0 = 440, freq1 = 440, gate = 0, killGate = 1, detuneVariance = 0, vel = 1.0, amp = 1, ampModLfo = 0, panning = 0,
 			freqModEnv = 0, freqModLfo = 0,
-			oscWaveShape = 0, oscWaveShapeModEnv = 0, oscWaveShapeModLfo = 0, oscLevel = 1, noiseLevel = 0, crackleLevel = 0,
+			oscWaveShape = 0, oscWaveShapeModEnv = 0, oscWaveShapeModLfo = 0, oscLevel = 1, subOscLevel = 0, noiseLevel = 0, crackleLevel = 0,
 			lpFilterCutoff = 2000, lpFilterCutoffModEnv = 0, lpFilterCutoffModLfo = 0, lpFilterResonance = 0.2,
 			envAttack = 0.1, envRelease = 0.5,
 			lfoFreq = 20,
 			chorusSend = 0, delaySend = 0;
 			var i_nyquist = SampleRate.ir * 0.5, i_cFreq = 48.midicps, signal,
-			freqPulse, lfo, killEnvelope, envelope, freqModRatio, filterCutoffRatio, filterCutoffModRatio;
+			lfo, killEnvelope, envelope, freqModRatio, filterCutoffRatio, filterCutoffModRatio;
 
 			// Envelopes
 			killGate = killGate + Impulse.kr(0); // Make sure doneAction fires
@@ -218,25 +218,25 @@ Engine_Oystercatcher : CroneEngine {
 				freqModRatio.linlin(-2, 0, 0.25, 1),
 				freqModRatio.linlin(0, 2, 1, 4)
 			]);
-			freq = (freq * freqModRatio).clip(20, i_nyquist);
+			freq0 = (freq0 * freqModRatio).clip(20, i_nyquist);
+			freq1 = (freq1 * freqModRatio).clip(20, i_nyquist);
 			detuneVariance = detuneVariance.linlin(0, 1, 0.001, 0.01);
-			freq = freq * Rand(1 - detuneVariance, 1 + detuneVariance);
-			freqPulse = freq * Rand(1 - detuneVariance, 1 + detuneVariance);
+			freq0 = freq0 * Rand(1 - detuneVariance, 1 + detuneVariance);
+			freq1 = freq1 * Rand(1 - detuneVariance, 1 + detuneVariance);
 
 			// Osc
 			oscWaveShape = (oscWaveShape + (envelope * oscWaveShapeModEnv) + (lfo.linlin(-1, 1, 0, 1) * oscWaveShapeModLfo)).clip;
-			signal = VarSaw.ar(freq, 0, oscWaveShape.linlin(0, 1, 0.51, 0.99)) * oscWaveShape.linlin(0, 1, 0.33, 0.15);
-			signal = signal + Pulse.ar(freqPulse, 0.49, 0.15);
-			signal = signal * oscLevel;
+			signal = VarSaw.ar(freq0, 0, oscWaveShape.linlin(0, 1, 0.505, 0.99)) * oscWaveShape.linlin(0, 1, 0.33, 0.15) * oscLevel;
+			signal = signal + VarSaw.ar(freq1, 0, 0.5, subOscLevel * 0.33);
 
 			// Noise
 			signal = signal + WhiteNoise.ar(noiseLevel);
 			signal = signal + LPF.ar(Crackle.ar(2.0, crackleLevel), 2500);
 
 			// LP filter
-			filterCutoffRatio = Select.kr((freq < i_cFreq), [
-				i_cFreq + (freq - i_cFreq),
-				i_cFreq - (i_cFreq - freq)
+			filterCutoffRatio = Select.kr((freq0 < i_cFreq), [
+				i_cFreq + (freq0 - i_cFreq),
+				i_cFreq - (i_cFreq - freq0)
 			]);
 			filterCutoffRatio = filterCutoffRatio / i_cFreq;
 			lpFilterCutoff = lpFilterCutoff * filterCutoffRatio;
@@ -403,19 +403,19 @@ Engine_Oystercatcher : CroneEngine {
 			chordVoiceGroup.set(\gate, 0);
 		});
 
-		// percOn(id, freq, detuneVariance, vel, ampModLfo, freqModEnv, freqModLfo,
-		// oscWaveShape, oscWaveShapeModEnv, oscWaveShapeModLfo, noiseLevel, crackleLevel
+		// percOn(id, freq0, freq1, detuneVariance, vel, ampModLfo, freqModEnv, freqModLfo,
+		// oscWaveShape, oscWaveShapeModEnv, oscWaveShapeModLfo, subOscLevel, noiseLevel, crackleLevel
 		// lpFilterCutoff, lpFilterCutoffModEnv, lpFilterCutoffModLfo, lpFilterResonance,
 		// envAttack, envRelease, lfoFreq, chorusSend, delaySend)
 
-		this.addCommand(\percOn, "ifffffffffffffffffffffff", {
+		this.addCommand(\percOn, "ifffffffffffffffffffffffff", {
 			arg msg;
-			var id = msg[1], freq = msg[2], detuneVariance = msg[3], vel = msg[4] ?? 1, amp = msg[5] ?? 1, ampModLfo = msg[6], panning = msg[7],
-			freqModEnv = msg[8], freqModLfo = msg[9],
-			oscWaveShape = msg[10], oscWaveShapeModEnv = msg[11], oscWaveShapeModLfo = msg[12],
-			oscLevel = msg[13], noiseLevel = msg[14], crackleLevel = msg[15],
-			lpFilterCutoff = msg[16] ?? 2000, lpFilterCutoffModEnv = msg[17], lpFilterCutoffModLfo = msg[18], lpFilterResonance = msg[19],
-			envAttack = msg[20] ?? 0.1, envRelease = msg[21] ?? 0.5, lfoFreq = msg[22] ?? 20, chorusSend = msg[23], delaySend = msg[24];
+			var id = msg[1], freq0 = msg[2], freq1 = msg[3], detuneVariance = msg[4], vel = msg[5] ?? 1, amp = msg[6] ?? 1, ampModLfo = msg[7], panning = msg[8],
+			freqModEnv = msg[9], freqModLfo = msg[10],
+			oscWaveShape = msg[11], oscWaveShapeModEnv = msg[12], oscWaveShapeModLfo = msg[13],
+			oscLevel = msg[14], subOscLevel = msg[15], noiseLevel = msg[16], crackleLevel = msg[17],
+			lpFilterCutoff = msg[18] ?? 2000, lpFilterCutoffModEnv = msg[19], lpFilterCutoffModLfo = msg[20], lpFilterResonance = msg[21],
+			envAttack = msg[22] ?? 0.1, envRelease = msg[23] ?? 0.5, lfoFreq = msg[24] ?? 20, chorusSend = msg[25], delaySend = msg[26];
 			var voiceToRemove, newVoice;
 
 			// Remove voice if ID matches or there are too many
@@ -433,7 +433,8 @@ Engine_Oystercatcher : CroneEngine {
 			context.server.makeBundle(nil, {
 				newVoice = (id: id, theSynth: Synth.new(defName: \percVoice, args: [
 					\out, mixerBus,
-					\freq, freq,
+					\freq0, freq0,
+					\freq1, freq1,
 					\gate, 1,
 					\detuneVariance, detuneVariance,
 					\vel, vel.linlin(0, 1, 0.3, 1),
@@ -446,6 +447,7 @@ Engine_Oystercatcher : CroneEngine {
 					\oscWaveShapeModEnv, oscWaveShapeModEnv,
 					\oscWaveShapeModLfo, oscWaveShapeModLfo,
 					\oscLevel, oscLevel,
+					\subOscLevel, subOscLevel,
 					\noiseLevel, noiseLevel,
 					\crackleLevel, crackleLevel,
 					\lpFilterCutoff, lpFilterCutoff,

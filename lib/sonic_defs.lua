@@ -24,29 +24,35 @@ SonicDefs.bomgar = {
     chord_osc_wave_shape_low = 1,
     chord_osc_wave_shape_high = 0.2,
     chord_noise_level_low = 0.002,
-    chord_noise_level_high = 0.03,
-    chord_lp_filter_cutoff_low = 700,
+    chord_noise_level_high = 0.06,
+    chord_lp_filter_cutoff_low = 500,
     chord_lp_filter_cutoff_high = 2000,
     chord_lfo_freq_low = 0.001,
     chord_lfo_freq_high = 0.0015,
 
     -- Perc
-    perc_osc_level_low = 0,
+    perc_osc_level_low = 0.15,
     perc_osc_level_high = 1,
+    perc_sub_osc_level_low = 0,
+    perc_sub_osc_level_high = 0.25,
     perc_crackle_level_low = 0,
-    perc_crackle_level_high = 0.35,
-    perc_env_release_low = 0.1,
-    perc_env_release_high = 0.8,
+    perc_crackle_level_high = 0.4,
+    perc_env_release_low = 0.05,
+    perc_env_release_high = 1,
     perc_panning_low = -1,
     perc_panning_high = 1,
     perc_lp_filter_cutoff_low = 400,
-    perc_lp_filter_cutoff_high = 6000,
+    perc_lp_filter_cutoff_high = 4000,
     perc_lp_filter_resonance_low = 0.1,
-    perc_lp_filter_resonance_high = 0.35,
+    perc_lp_filter_resonance_high = 0.4,
     perc_lfo_freq_low = 0.05,
     perc_lfo_freq_high = 10,
     perc_delay_send_low = 0,
-    perc_delay_send_high = 0.9
+    perc_delay_send_high = 0.7,
+
+    -- FX
+    fx_delay_feedback_low = 0.2,
+    fx_delay_feedback_high = 1
   },
 
   -- Params
@@ -86,23 +92,22 @@ SonicDefs.bomgar = {
 
     perc_osc_wave_shape = 0,
     perc_osc_wave_shape_mod_env = 0,
-    perc_osc_wave_shape_mod_lfo = 0.6,
+    perc_osc_wave_shape_mod_lfo = 0,
     perc_noise_level = 0,
 
-    perc_lp_filter_cutoff_mod_env = 0.05,
+    perc_lp_filter_cutoff_mod_env = 0.02,
     perc_lp_filter_cutoff_mod_lfo = 0.3,
 
     perc_env_attack = 0.02,
-    perc_amp = 0.5,
+    perc_amp = 0.3,
     perc_amp_mod_lfo = 0,
 
     perc_chorus_send = 0.3,
 
     -- FX
-    fx_delay_time = 0.24,
+    fx_delay_time = 0.88,
     fx_delay_mod_freq = 0.2,
-    fx_delay_mod_depth = 0.2,
-    fx_delay_feedback = 0.7
+    fx_delay_mod_depth = 0.2
   }
 }
 

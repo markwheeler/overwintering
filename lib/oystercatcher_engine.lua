@@ -101,6 +101,7 @@ function Oystercatcher.add_perc_params()
   params:add{type = "control", id = "perc_osc_wave_shape_mod_env", name = "Osc Wave Shape Mod: Env", controlspec = specs.OSC_WAVE_SHAPE_MOD_ENV}
   params:add{type = "control", id = "perc_osc_wave_shape_mod_lfo", name = "Osc Wave Shape Mod: LFO", controlspec = specs.OSC_WAVE_SHAPE_MOD_LFO}
   params:add{type = "control", id = "perc_osc_level", name = "Osc Level", controlspec = specs.OSC_LEVEL}
+  params:add{type = "control", id = "perc_sub_osc_level", name = "Sub Osc Level", controlspec = specs.OSC_LEVEL}
   params:add{type = "control", id = "perc_noise_level", name = "Noise Level", controlspec = specs.NOISE_LEVEL}
   params:add{type = "control", id = "perc_crackle_level", name = "Crackle Level", controlspec = specs.CRACKLE_LEVEL}
 
