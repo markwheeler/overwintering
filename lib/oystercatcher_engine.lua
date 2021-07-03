@@ -12,7 +12,7 @@ local Oystercatcher = {}
 local specs = {}
 
 specs.DETUNE_VARIANCE = ControlSpec.UNIPOLAR
-specs.CONTROL_LAG = ControlSpec.new(0, 2, "lin", 0, 0.5, "s")
+specs.CONTROL_LAG = ControlSpec.new(0, 5, "lin", 0, 1, "s")
 specs.AMP = ControlSpec.new(0, 11, "lin", 0, 0.5)
 specs.AMP_MOD_LFO = ControlSpec.UNIPOLAR
 specs.PANNING = ControlSpec.BIPOLAR
@@ -42,7 +42,7 @@ specs.LFO_FREQ = ControlSpec.new(0.1, 10, 'exp', 0, 4, "Hz")
 specs.AUDIO_RATE_LFO_FREQ = ControlSpec.new(0.1, 1000, 'exp', 0, 4, "Hz")
 
 specs.DELAY_TIME = ControlSpec.new(0, 4, "lin", 0, 0.25, "s")
-specs.DELAY_MOD_FREQ = ControlSpec.new(0, 2, "lin", 0, 0.2)
+specs.DELAY_MOD_FREQ = ControlSpec.new(0, 2, "lin", 0, 0.2, "Hz")
 specs.DELAY_MOD_DEPTH = ControlSpec.UNIPOLAR
 specs.DELAY_FEEDBACK = ControlSpec.new(0, 1, 'lin', 0, 0.7)
 
@@ -75,7 +75,7 @@ function Oystercatcher.add_chord_params()
   params:add{type = "control", id = "chord_env_sustain", name = "Env Sustain", controlspec = specs.ENV_SUSTAIN, action = engine.envSustain}
   params:add{type = "control", id = "chord_env_release", name = "Env Release", controlspec = specs.ENV_RELEASE, action = engine.envRelease}
   params:add{type = "control", id = "chord_amp", name = "Amp", controlspec = specs.AMP, action = engine.amp}
-  params:add{type = "control", id = "chord_amp_mod_lfo", name = "Amp Mod: LFO", controlspec = specs.AMP_MOD_LFO, action = engine.amp_mod_lfo}
+  params:add{type = "control", id = "chord_amp_mod_lfo", name = "Amp Mod: LFO", controlspec = specs.AMP_MOD_LFO, action = engine.ampModLfo}
 
   params:add{type = "control", id = "chord_lfo_freq", name = "LFO Freq", controlspec = specs.LFO_FREQ, action = engine.lfoFreq}
 
