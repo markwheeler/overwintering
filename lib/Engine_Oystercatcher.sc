@@ -198,7 +198,7 @@ Engine_Oystercatcher : CroneEngine {
 			lfoFreq = 20,
 			chorusSend = 0, delaySend = 0;
 			var i_nyquist = SampleRate.ir * 0.5, i_cFreq = 48.midicps, signal,
-			lfo, killEnvelope, envelope, freqModRatio, filterCutoffRatio, filterCutoffModRatio;
+			freqPulse, lfo, killEnvelope, envelope, freqModRatio, filterCutoffRatio, filterCutoffModRatio;
 
 			// Envelopes
 			killGate = killGate + Impulse.kr(0); // Make sure doneAction fires
@@ -218,10 +218,13 @@ Engine_Oystercatcher : CroneEngine {
 			freq = (freq * freqModRatio).clip(20, i_nyquist);
 			detuneVariance = detuneVariance.linlin(0, 1, 0.001, 0.01);
 			freq = freq * Rand(1 - detuneVariance, 1 + detuneVariance);
+			freqPulse = freq * Rand(1 - detuneVariance, 1 + detuneVariance);
 
 			// Osc
 			oscWaveShape = (oscWaveShape + (envelope * oscWaveShapeModEnv) + (lfo.linlin(-1, 1, 0, 1) * oscWaveShapeModLfo)).clip;
-			signal = VarSaw.ar(freq, 0, oscWaveShape.linlin(0, 1, 0.51, 0.99)) * oscWaveShape.linlin(0, 1, 0.33, 0.15) * oscLevel;
+			signal = VarSaw.ar(freq, 0, oscWaveShape.linlin(0, 1, 0.51, 0.99)) * oscWaveShape.linlin(0, 1, 0.33, 0.15);
+			signal = signal + Pulse.ar(freqPulse, 0.49, 0.15);
+			signal = signal * oscLevel;
 
 			// Noise
 			signal = signal + WhiteNoise.ar(noiseLevel);

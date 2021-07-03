@@ -25,18 +25,28 @@ SonicDefs.bomgar = {
     chord_osc_wave_shape_high = 0.2,
     chord_noise_level_low = 0.002,
     chord_noise_level_high = 0.03,
-    chord_lp_filter_cutoff_low = 600,
+    chord_lp_filter_cutoff_low = 700,
     chord_lp_filter_cutoff_high = 2000,
+    chord_lfo_freq_low = 0.001,
+    chord_lfo_freq_high = 0.0015,
 
     -- Perc
-    perc_env_release_low = 0.03,
-    perc_env_release_high = 1.5,
+    perc_osc_level_low = 0,
+    perc_osc_level_high = 1,
+    perc_crackle_level_low = 0,
+    perc_crackle_level_high = 0.35,
+    perc_env_release_low = 0.1,
+    perc_env_release_high = 0.8,
     perc_panning_low = -1,
     perc_panning_high = 1,
-    perc_lp_filter_cutoff_low = 200,
-    perc_lp_filter_cutoff_high = 900,
-    perc_delay_send_low = 0.1,
-    perc_delay_send_high = 1
+    perc_lp_filter_cutoff_low = 400,
+    perc_lp_filter_cutoff_high = 6000,
+    perc_lp_filter_resonance_low = 0.1,
+    perc_lp_filter_resonance_high = 0.35,
+    perc_lfo_freq_low = 0.05,
+    perc_lfo_freq_high = 10,
+    perc_delay_send_low = 0,
+    perc_delay_send_high = 0.9
   },
 
   -- Params
@@ -58,10 +68,8 @@ SonicDefs.bomgar = {
     chord_env_decay = 2,
     chord_env_sustain = 1,
     chord_env_release = 5,
-    chord_amp = 0.7,
+    chord_amp = 0.8,
     chord_amp_mod_lfo = 0.05,
-
-    chord_lfo_freq = 0.001,
 
     chord_ring_mod_mix = 0,
     chord_ring_mod_mix_env = 0,
@@ -72,26 +80,22 @@ SonicDefs.bomgar = {
     chord_delay_send = 0.2,
 
     -- Perc
-    perc_detune_variance = 0.3,
+    perc_detune_variance = 0.35,
     perc_freq_mod_env = 0,
     perc_freq_mod_lfo = 0,
 
-    perc_osc_wave_shape = 0.5,
-    perc_osc_wave_shape_mod_env = 0.3,
-    perc_osc_wave_shape_mod_lfo = 0.1,
-    perc_osc_level = 1,
+    perc_osc_wave_shape = 0,
+    perc_osc_wave_shape_mod_env = 0,
+    perc_osc_wave_shape_mod_lfo = 0.6,
     perc_noise_level = 0,
-    perc_crackle_level = 0.2,
 
-    perc_lp_filter_cutoff_mod_env = 0.2,
-    perc_lp_filter_cutoff_mod_lfo = 0,
-    perc_lp_filter_resonance = 0.15,
+    perc_lp_filter_cutoff_mod_env = 0.05,
+    perc_lp_filter_cutoff_mod_lfo = 0.3,
 
     perc_env_attack = 0.02,
-    perc_amp = 0.4,
-    perc_amp_mod_lfo = 0.1,
+    perc_amp = 0.25,
+    perc_amp_mod_lfo = 0,
 
-    perc_lfo_freq = 0.3,
     perc_chorus_send = 0.3,
 
     -- FX

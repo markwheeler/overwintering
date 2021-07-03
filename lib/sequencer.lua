@@ -47,6 +47,8 @@ local function generate_triggers(bird_index)
       trig.y_grid_norm = util.linlin(1, TRIG_ROWS, 1, 0, r)
       trig.screen_x = util.round(trig.x_norm * 128)
       trig.screen_y = util.round((1 - trig.y_norm) * 64)
+      trig.mod_a = util.linlin(1, TRIG_COLS * TRIG_ROWS, 0, 1, (r - 1 ) * TRIG_COLS + c)
+      trig.mod_b = util.linlin(1, TRIG_COLS * TRIG_ROWS, 1, 0, (c - 1 ) * TRIG_ROWS + r)
 
       -- Calculate distance from perc_start
       local x_diff, y_diff = math.abs(trig.x_norm - sonic_def.perc_start_x), math.abs((1 - trig.y_norm) * 0.5 - sonic_def.perc_start_y)
@@ -171,6 +173,12 @@ local function update_chord_params()
     util.linlin(0, 1, dyn_params.chord_noise_level_low, dyn_params.chord_noise_level_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm"))
   )
 
+  -- Lower bound to LFO freq
+  params:set(
+    "chord_lfo_freq",
+    util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, 1 - Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "min_y_norm"))
+  )
+
  -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
 
 end
@@ -217,21 +225,34 @@ local function play_perc(index)
 
   if trigger_index > 0 then
 
-    -- Trigger distance from perc_start to note
-    local note_num = util.linlin(0, 1, chord_notes[1] + 12, chord_notes[1] + 24, Sequencer.triggers[trigger_index].distance_from_root)
-    note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
-    print(util.round(Sequencer.triggers[trigger_index].distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
+    local trigger = Sequencer.triggers[trigger_index]
 
+    -- Trigger distance from perc_start to note
+    local note_num = util.linlin(0, 1, chord_notes[1] + 12, chord_notes[1] + 24, trigger.distance_from_root)
+    note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
+    print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
+
+    local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
+
+    -- Trigger mod_a to osc and crackle levels
+    params:set("perc_osc_level", util.linlin(0, 1, dyn_params.perc_osc_level_high, dyn_params.perc_osc_level_low, trigger.mod_a))
+    params:set("perc_crackle_level", util.linlin(0, 1, dyn_params.perc_crackle_level_low, dyn_params.perc_crackle_level_high, trigger.mod_a))
+
+    -- Trigger mod_b to filter resonance
+    params:set("perc_lp_filter_resonance", util.linlin(0, 1, dyn_params.perc_lp_filter_resonance_high, dyn_params.perc_lp_filter_resonance_low, trigger.mod_b))
+
+    -- Density to LFO freq
+    params:set("perc_lfo_freq", util.linexp(0, 1, dyn_params.perc_lfo_freq_low, dyn_params.perc_lfo_freq_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm")))
 
     -- Num triggers to env_release, delay_send and lp_filter_cutoff
     local num_triggers_norm = Sequencer.num_active_triggers / (TRIG_COLS * TRIG_ROWS)
     params:set("perc_env_release", util.linlin(0, 1, dyn_params.perc_env_release_low, dyn_params.perc_env_release_high, num_triggers_norm))
     params:set("perc_delay_send", util.linlin(0, 1, dyn_params.perc_delay_send_high, dyn_params.perc_delay_send_low, num_triggers_norm))
-    params:set("perc_lp_filter_cutoff", util.linlin(0, 1, dyn_params.perc_lp_filter_cutoff_low, dyn_params.perc_lp_filter_cutoff_high, num_triggers_norm))
+    params:set("perc_lp_filter_cutoff", util.linexp(0, 1, dyn_params.perc_lp_filter_cutoff_low, dyn_params.perc_lp_filter_cutoff_high, num_triggers_norm))
 
     -- Trig x position to panning
-    params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, Sequencer.triggers[trigger_index].x_grid_norm))
+    params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, trigger.x_grid_norm))
 
     engine.percOn(
       math.floor(trigger_index), -- voiceId
@@ -260,7 +281,7 @@ local function play_perc(index)
       params:get("perc_delay_send")
     )
 
-    Sequencer.triggers[trigger_index].played = true
+    trigger.played = true
 
   end
 
