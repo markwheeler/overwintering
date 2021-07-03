@@ -22,7 +22,11 @@ function Clustering.kmeans(data, nclusters, init)
     local K = 1
   
     -- take one center c1, chosen uniformly at random from 'data'
-    local i = math.random(1, #data)
+
+    -- NOTE: Changed this to a fixed value for reproducable results
+    -- local i = math.random(1, #data)
+    local i = util.round(#data * 0.5)
+
     centers[K] = {x = data[i].x, y = data[i].y}
     local D = {}
   
@@ -42,7 +46,10 @@ function Clustering.kmeans(data, nclusters, init)
         sum_D = sum_D + min_d
       end
   
-      sum_D = math.random() * sum_D
+      -- NOTE: Changed this to a fixed value for reproducable results
+      -- sum_D = math.random() * sum_D
+      sum_D = 0.5 * sum_D
+      
       for i = 1,#data do
         sum_D = sum_D - D[i]
   

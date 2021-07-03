@@ -93,7 +93,7 @@ SonicDefs.bomgar = {
     perc_lp_filter_cutoff_mod_lfo = 0.3,
 
     perc_env_attack = 0.02,
-    perc_amp = 0.25,
+    perc_amp = 0.5,
     perc_amp_mod_lfo = 0,
 
     perc_chorus_send = 0.3,

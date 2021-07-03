@@ -113,6 +113,10 @@ local function play_chord()
     local distance = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
     local interval = math.floor(util.linlin(0, 1, 0, 36, distance))
 
+    -- TODO is this the right value?
+    if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
+    interval = math.min(interval, 22)
+
     if i == 1 then
       for n = 1, Trove.MAX_NUM_CLUSTERS do
         chord_notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
@@ -134,7 +138,7 @@ local function play_chord()
     end
   end
 
-  print("--- chordOn")
+  print("--- chordOn", Sequencer.slice_index)
   for i = 1, #chord_notes do
     print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
   end
@@ -143,7 +147,7 @@ local function play_chord()
   local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
   engine.chordOn(
-    math.floor(Sequencer.slice_index), -- voiceId
+    Sequencer.slice_index, -- voiceId
     note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
     osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
   )
@@ -185,15 +189,21 @@ end
 
 local function generate_perc_notes()
 
-  if Sequencer.num_active_triggers < 8 then
-    perc_steps_this_slice = 8
-  elseif Sequencer.num_active_triggers < 12 then
+  if Sequencer.num_active_triggers < 12 then
     perc_steps_this_slice = 12
-  elseif Sequencer.num_active_triggers < 16 then
-    perc_steps_this_slice = 16
-  elseif Sequencer.num_active_triggers < 32 then
-    perc_steps_this_slice = 32
+  else
+    perc_steps_this_slice = 24
   end
+
+  -- if Sequencer.num_active_triggers < 8 then
+  --   perc_steps_this_slice = 8
+  -- elseif Sequencer.num_active_triggers < 12 then
+  --   perc_steps_this_slice = 12
+  -- elseif Sequencer.num_active_triggers < 16 then
+  --   perc_steps_this_slice = 16
+  -- else
+  --   perc_steps_this_slice = 32
+  -- end
 
   -- Add the perc notes for this slice
   perc_notes_this_slice = {}
@@ -209,13 +219,13 @@ local function generate_perc_notes()
   -- end
 
   -- Insert rests at end of slice
-  while #perc_notes_this_slice < perc_steps_this_slice do
-    table.insert(perc_notes_this_slice, 0)
-  end
+  -- while #perc_notes_this_slice < perc_steps_this_slice do
+  --   table.insert(perc_notes_this_slice, 0)
+  -- end
 
-  print("---- perc_notes_this_slice")
-  tab.print(perc_notes_this_slice)
-  print("----")
+  -- print("---- perc_notes_this_slice")
+  -- tab.print(perc_notes_this_slice)
+  -- print("----")
 
 end
 
@@ -230,7 +240,7 @@ local function play_perc(index)
     -- Trigger distance from perc_start to note
     local note_num = util.linlin(0, 1, chord_notes[1] + 12, chord_notes[1] + 24, trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
-    print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
+    -- print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
@@ -255,7 +265,7 @@ local function play_perc(index)
     params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, trigger.x_grid_norm))
 
     engine.percOn(
-      math.floor(trigger_index), -- voiceId
+      trigger_index, -- voiceId
       MusicUtil.note_num_to_freq(note_num), -- freq
       params:get("perc_detune_variance"),
       util.linlin(0, 1, 0.4, 1, math.random()), -- vel
@@ -312,7 +322,7 @@ function Sequencer.update()
   -- Play perc (passes index of perc step)
   if Sequencer.num_active_triggers > 0 and (Sequencer.step_index - 1) % (Sequencer.STEPS_PER_SLICE / perc_steps_this_slice) == 0 then
     local perc_index = math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1)
-    -- perc_index = util.wrap(perc_index, 1, #perc_notes_this_slice) -- Required when not filling out the slices with rests
+    perc_index = util.wrap(perc_index, 1, #perc_notes_this_slice) -- Required when not filling out the slices with rests
     play_perc(perc_index)
   end
 

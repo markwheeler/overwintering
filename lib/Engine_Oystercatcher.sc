@@ -8,9 +8,11 @@
 
 Engine_Oystercatcher : CroneEngine {
 
-	classvar maxPercVoices = 10;
+	classvar maxChordVoices = 3;
+	classvar maxPercVoices = 8;
 	var chordVoiceGroup;
 	var percVoiceGroup;
+	var chordVoiceList;
 	var percVoiceList;
 
 	var lfo;
@@ -58,6 +60,7 @@ Engine_Oystercatcher : CroneEngine {
 
 		chordVoiceGroup = Group.new(context.xg);
 		percVoiceGroup = Group.new(context.xg);
+		chordVoiceList = List.new();
 		percVoiceList = List.new();
 
 		lfoBus = Bus.control(context.server, 1);
@@ -67,13 +70,11 @@ Engine_Oystercatcher : CroneEngine {
 		mixerBus = Bus.audio(context.server, 2);
 
 		delayBuf = Buffer.alloc(context.server, context.server.sampleRate * 4, 2);
-		"Alloc!".postln;
-		delayBuf.postln;
 
 
 		// Chord voice
 		SynthDef(\chordVoice, {
-			arg out, lfoIn, ringModIn, freq0 = 440, freq1 = 440, freq2 = 440, freq3 = 440, gate = 0,
+			arg out, lfoIn, ringModIn, freq0 = 440, freq1 = 440, freq2 = 440, freq3 = 440, gate = 0, killGate = 1,
 			oscMod0 = 1, oscMod1 = 1, oscMod2 = 1, oscMod3 = 1,
 			controlLag = 0.01, detuneVariance = 0, amp = 1, ampModLfo,
 			freqModEnv, freqModLfo, oscWaveShape, oscWaveShapeModEnv, oscWaveShapeModLfo, oscLevel, noiseLevel,
@@ -83,7 +84,7 @@ Engine_Oystercatcher : CroneEngine {
 			chorusSend = 0.5, delaySend = 0.5;
 			var i_nyquist = SampleRate.ir * 0.5, i_cFreq = 48.midicps, signal,
 			lfo, ringMod,
-			freqModRatio, varSawWaveShape, envelope, filterCutoffRatio, filterCutoffModRatio;
+			freqModRatio, varSawWaveShape, envelope, killEnvelope, filterCutoffRatio, filterCutoffModRatio;
 
 			// LFO and ring mod in
 			lfo = In.kr(lfoIn, 1);
@@ -105,6 +106,8 @@ Engine_Oystercatcher : CroneEngine {
 			ringModMixModLfo = Lag.kr(ringModMixModLfo, controlLag);
 
 			// Envelopes
+			killGate = killGate + Impulse.kr(0); // Make sure doneAction fires
+			killEnvelope = EnvGen.kr(envelope: Env.asr( 0, 1, 0.01), gate: killGate, doneAction: Done.freeSelf);
 			envelope = EnvGen.ar(envelope: Env.adsr( envAttack, envDecay, envSustain, envRelease), gate: gate, doneAction: Done.freeSelf);
 
 			// Freqs
@@ -159,7 +162,7 @@ Engine_Oystercatcher : CroneEngine {
 			// signal = RLPF.ar(in: signal, freq: lpFilterCutoff, rq: lpFilterResonance.linexp(0, 1, 1, 0.32)); // -24dB
 
 			// Amp
-			signal = signal * envelope * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1);
+			signal = signal * envelope * killEnvelope * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1);
 
 			// Ring mod
 			signal = SelectX.ar((ringModMix + (envelope * ringModMixModEnv) + (lfo * ringModMixModLfo)).clip, [signal, signal * ringMod]);
@@ -249,7 +252,7 @@ Engine_Oystercatcher : CroneEngine {
 			// signal = RLPF.ar(in: signal, freq: lpFilterCutoff, rq: lpFilterResonance.linexp(0, 1, 1, 0.32)); // -24dB
 
 			// Amp
-			signal = signal * envelope * vel * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1) * 0.7;
+			signal = signal * envelope * killEnvelope * vel * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1) * 0.7;
 
 			// Panning
 			signal = Pan2.ar(signal, panning);
@@ -299,7 +302,8 @@ Engine_Oystercatcher : CroneEngine {
 			delayedSignals = BufRd.ar(2, bufnum, (phase - delaySamps).wrap(0, frames), 0);
 
 			LocalOut.ar(delayedSignals);
-			BufWr.ar((signal + feedbackChannels).rotate(1) <! delayedSignals.asArray.first, bufnum, phase, 1);
+			BufWr.ar((signal + feedbackChannels) <! delayedSignals.asArray.first, bufnum, phase, 1);
+			// TODO re-introduce .rotate(1) ?
 
 			Out.ar(delayOut, delayedSignals);
 
@@ -327,14 +331,6 @@ Engine_Oystercatcher : CroneEngine {
 
 	// Commands
 
-	setArgOnVoice {
-		arg voiceId, name, value;
-		var voice = percVoiceList.detect{arg v; v.id == voiceId};
-		if(voice.notNil, {
-			voice.theSynth.set(name, value);
-		});
-	}
-
 	addCommands {
 
 		// chordOn(id, freq0, freq1, freq2, freq3, oscMod0, oscMod1, oscMod2, oscMod3)
@@ -342,13 +338,24 @@ Engine_Oystercatcher : CroneEngine {
 			arg msg;
 			var id = msg[1], freq0 = msg[2], freq1 = msg[3], freq2 = msg[4], freq3 = msg[5],
 			oscMod0 = msg[6], oscMod1 = msg[7], oscMod2 = msg[8], oscMod3 = msg[9];
+			var voiceToRemove, newVoice;
 
-			// Stop any playing chord
+			// Stop all playing chords
 			chordVoiceGroup.set(\gate, 0);
+
+			// Remove voice if ID matches or there are too many
+			voiceToRemove = chordVoiceList.detect{arg item; item.id == id};
+			if(voiceToRemove.isNil && (chordVoiceList.size >= maxChordVoices), {
+				voiceToRemove = chordVoiceList.last;
+			});
+			if(voiceToRemove.notNil, {
+				voiceToRemove.theSynth.set(\killGate, 0);
+				chordVoiceList.remove(voiceToRemove);
+			});
 
 			// Add new chord
 			context.server.makeBundle(nil, {
-				Synth.new(defName: \chordVoice, args: [
+				newVoice = (id: id, theSynth: Synth.new(defName: \chordVoice, args: [
 					\out, mixerBus,
 					\lfoIn, lfoBus,
 					\ringModIn, ringModBus,
@@ -384,7 +391,9 @@ Engine_Oystercatcher : CroneEngine {
 					\ringModMixModLfo, ringModMixModLfo,
 					\chorusSend, chorusSend,
 					\delaySend, delaySend,
-				], target: chordVoiceGroup);
+				], target: chordVoiceGroup).onFree({ chordVoiceList.remove(newVoice); }));
+
+				chordVoiceList.addFirst(newVoice);
 			});
 		});
 
@@ -448,7 +457,7 @@ Engine_Oystercatcher : CroneEngine {
 					\lfoFreq, lfoFreq,
 					\chorusSend, chorusSend,
 					\delaySend, delaySend,
-				], target: percVoiceGroup).onFree({ percVoiceList.remove(newVoice); }), gate: 1);
+				], target: percVoiceGroup).onFree({ percVoiceList.remove(newVoice); }));
 
 				percVoiceList.addFirst(newVoice);
 			});
@@ -460,7 +469,6 @@ Engine_Oystercatcher : CroneEngine {
 			var voice = percVoiceList.detect{arg v; v.id == msg[1]};
 			if(voice.notNil, {
 				voice.theSynth.set(\gate, 0);
-				voice.gate = 0;
 			});
 		});
 
@@ -468,7 +476,6 @@ Engine_Oystercatcher : CroneEngine {
 		this.addCommand(\percOffAll, "i", {
 			arg msg;
 			percVoiceGroup.set(\gate, 0);
-			percVoiceList.do({ arg v; v.gate = 0; });
 		});
 
 
