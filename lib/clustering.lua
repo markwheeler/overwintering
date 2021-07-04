@@ -1,7 +1,7 @@
-local Clustering = {}
-
 -- K-means Clustering
 -- From https://rosettacode.org/wiki/K-means%2B%2B_clustering#Lua
+
+local Clustering = {}
 
 function Clustering.kmeans(data, nclusters, init)
 

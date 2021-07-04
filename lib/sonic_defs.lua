@@ -22,11 +22,13 @@ SonicDefs.bomgar = {
 
     -- Chord
     chord_osc_wave_shape_low = 1,
-    chord_osc_wave_shape_high = 0.2,
+    chord_osc_wave_shape_high = 0,
     chord_noise_level_low = 0,
-    chord_noise_level_high = 0.06,
+    chord_noise_level_high = 0.03,
     chord_lp_filter_cutoff_low = 500,
     chord_lp_filter_cutoff_high = 2000,
+    chord_amp_mod_lfo_low = 0.5,
+    chord_amp_mod_lfo_high = 0.05,
     chord_lfo_freq_low = 0.01,
     chord_lfo_freq_high = 0.0015,
 
@@ -75,7 +77,6 @@ SonicDefs.bomgar = {
     chord_env_sustain = 1,
     chord_env_release = 5,
     chord_amp = 1.1,
-    chord_amp_mod_lfo = 0.05,
 
     chord_ring_mod_mix = 0,
     chord_ring_mod_mix_env = 0,

@@ -302,10 +302,15 @@ local function step_changed()
   local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
   local dyn_params = sonic_def.dynamic_params
 
-  -- Area to wave shape
+  -- Area to wave shape and amp mod LFO
+  local area = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm")
   params:set(
     "chord_osc_wave_shape",
-    util.linlin(0, 1, dyn_params.chord_osc_wave_shape_low, dyn_params.chord_osc_wave_shape_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm"))
+    util.linlin(0, 1, dyn_params.chord_osc_wave_shape_low, dyn_params.chord_osc_wave_shape_high, area)
+  )
+  params:set(
+    "chord_amp_mod_lfo",
+    util.linlin(0, 1, dyn_params.chord_amp_mod_lfo_low, dyn_params.chord_amp_mod_lfo_high, area)
   )
  
   -- Mass to LP filter cutoff and delay feedback
@@ -320,15 +325,17 @@ local function step_changed()
   )
 
   -- Density to noise level
+  local density = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm")
   params:set(
     "chord_noise_level",
-    util.linlin(0, 1, dyn_params.chord_noise_level_low, dyn_params.chord_noise_level_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm"))
+    util.linlin(0, 1, dyn_params.chord_noise_level_low, dyn_params.chord_noise_level_high, density)
   )
 
   -- Lower bound to LFO freq
+  local lower_bound = 1 - Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "min_y_norm")
   params:set(
     "chord_lfo_freq",
-    util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, 1 - Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "min_y_norm"))
+    util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, lower_bound)
   )
 
  -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?

@@ -1,6 +1,9 @@
 local Trove = {}
 
 Trove.MAX_NUM_CLUSTERS = 4
+Trove.AREA_GRID_COLS = 20
+Trove.AREA_GRID_ROWS = Trove.AREA_GRID_COLS / 2
+
 Trove.bird_data = {}
 
 local Clustering = include("lib/clustering")
@@ -28,9 +31,22 @@ local function process_bird(bird)
 
   for _, s in ipairs(bird.slices) do
 
+    s.area_grid = {}
+    for gx = 1, Trove.AREA_GRID_COLS do
+      table.insert(s.area_grid, {})
+      for gy = 1, Trove.AREA_GRID_ROWS do
+        table.insert(s.area_grid[gx], false)
+      end
+    end
+
     -- Calculate normalized points
     for _, p in ipairs(s.points) do
       p.x_norm, p.y_norm = Trove.normalize_point(p.x, p.y, bird.x_offset, bird.y_offset, bird.scale)
+
+      -- Update area grid
+      local gx = util.round(util.linlin(0, 1, 0.5, Trove.AREA_GRID_COLS + 0.499, p.x_norm))
+      local gy = util.round(util.linlin(0, 1, 0.5, Trove.AREA_GRID_ROWS + 0.499, p.y_norm))
+      s.area_grid[gx][gy] = true
     end
 
     s.min_x_norm, s.min_y_norm = Trove.normalize_point(s.min_x, s.min_y, bird.x_offset, bird.y_offset, bird.scale)
@@ -40,16 +56,21 @@ local function process_bird(bird)
     s.num_points_norm = util.linlin(bird.min_points, bird.max_points, 0, 1, s.num_points)
 
     -- Calculate area
-    s.area = (s.max_x - s.min_x) * (s.max_y - s.min_y)
+    s.area = 0
+    for _, col in ipairs(s.area_grid) do
+      for _, cell in ipairs(col) do
+        if cell then
+          s.area = s.area + 1
+        end
+      end
+    end
     if s.area < bird.min_area then bird.min_area = s.area end
     if s.area > bird.max_area then bird.max_area = s.area end
-    s.area_norm = util.linlin(bird.min_area, bird.max_area, 0, 1, s.area)
 
     -- Calculate density
     s.density = s.num_points / s.area
     if s.density < bird.min_density then bird.min_density = s.density end
     if s.density > bird.max_density then bird.max_density = s.density end
-    s.density_norm = util.linlin(bird.min_density, bird.max_density, 0, 1, s.density)
 
     -- Calculate clusters
     -- Note: Could be smarter about estimating number of clusters but just basing on number points for now
@@ -85,8 +106,12 @@ local function process_bird(bird)
 
   end
 
-  -- Store normalized num_points per cluster
+  -- Store normalized values
   for _, s in ipairs(bird.slices) do
+
+    s.area_norm = util.linlin(bird.min_area, bird.max_area, 0, 1, s.area)
+    s.density_norm = util.linlin(bird.min_density, bird.max_density, 0, 1, s.density)
+
     for _, c in ipairs(s.clusters) do
       c.num_points_norm = util.linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points)
     end
