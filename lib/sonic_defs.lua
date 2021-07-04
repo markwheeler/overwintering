@@ -24,10 +24,10 @@ SonicDefs.bomgar = {
     chord_osc_wave_shape_low = 1,
     chord_osc_wave_shape_high = 0.2,
     chord_noise_level_low = 0,
-    chord_noise_level_high = 0.055,
+    chord_noise_level_high = 0.06,
     chord_lp_filter_cutoff_low = 500,
     chord_lp_filter_cutoff_high = 2000,
-    chord_lfo_freq_low = 0.001,
+    chord_lfo_freq_low = 0.01,
     chord_lfo_freq_high = 0.0015,
 
     -- Perc
@@ -36,17 +36,17 @@ SonicDefs.bomgar = {
     perc_sub_osc_level_low = 0,
     perc_sub_osc_level_high = 0.25,
     perc_crackle_level_low = 0,
-    perc_crackle_level_high = 0.4,
+    perc_crackle_level_high = 0.5,
     perc_env_release_low = 0.05,
-    perc_env_release_high = 1,
-    perc_panning_low = -0.9,
-    perc_panning_high = 0.9,
-    perc_lp_filter_cutoff_low = 400,
-    perc_lp_filter_cutoff_high = 4000,
+    perc_env_release_high = 1.1,
+    perc_panning_low = -0.85,
+    perc_panning_high = 0.85,
+    perc_lp_filter_cutoff_low = 250,
+    perc_lp_filter_cutoff_high = 100,
     perc_lp_filter_resonance_low = 0.1,
-    perc_lp_filter_resonance_high = 0.4,
+    perc_lp_filter_resonance_high = 0.32,
     perc_lfo_freq_low = 0.05,
-    perc_lfo_freq_high = 10,
+    perc_lfo_freq_high = 400,
     perc_delay_send_low = 0,
     perc_delay_send_high = 0.7,
 
@@ -59,13 +59,13 @@ SonicDefs.bomgar = {
   params = {
 
     -- Chord
-    chord_detune_variance = 0.2,
+    chord_detune_variance = 0.4,
     chord_freq_mod_env = 0,
     chord_freq_mod_lfo = 0,
     chord_osc_wave_shape_mod_env = 0,
     chord_osc_wave_shape_mod_lfo = 0,
     chord_osc_level = 1,
-        
+    
     chord_lp_filter_cutoff_mod_env = 0,
     chord_lp_filter_cutoff_mod_lfo = 0.05,
     chord_lp_filter_resonance = 0.3,
@@ -74,7 +74,7 @@ SonicDefs.bomgar = {
     chord_env_decay = 2,
     chord_env_sustain = 1,
     chord_env_release = 5,
-    chord_amp = 1.5,
+    chord_amp = 1.1,
     chord_amp_mod_lfo = 0.05,
 
     chord_ring_mod_mix = 0,
@@ -82,25 +82,25 @@ SonicDefs.bomgar = {
     chord_ring_mod_mix_lfo = 0.2,
     chord_ring_mod_freq = 223,
 
-    chord_chorus_send = 0.4,
-    chord_delay_send = 0.2,
+    chord_chorus_send = 0.6,
+    chord_delay_send = 0.15,
 
     -- Perc
-    perc_detune_variance = 0.35,
+    perc_detune_variance = 0.4,
     perc_freq_mod_env = 0,
     perc_freq_mod_lfo = 0,
 
-    perc_osc_wave_shape = 0,
+    perc_osc_wave_shape = 0.5,
     perc_osc_wave_shape_mod_env = 0,
     perc_osc_wave_shape_mod_lfo = 0,
     perc_noise_level = 0,
 
-    perc_lp_filter_cutoff_mod_env = 0.02,
-    perc_lp_filter_cutoff_mod_lfo = 0.3,
+    perc_lp_filter_cutoff_mod_env = 0.5,
+    perc_lp_filter_cutoff_mod_lfo = 0,
 
-    perc_env_attack = 0.02,
-    perc_amp = 0.4,
-    perc_amp_mod_lfo = 0,
+    perc_env_attack = 0.01,
+    perc_amp = 1,
+    perc_amp_mod_lfo = 0.75,
 
     perc_chorus_send = 0.3,
 

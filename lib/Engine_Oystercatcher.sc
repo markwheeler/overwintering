@@ -133,10 +133,10 @@ Engine_Oystercatcher : CroneEngine {
 			oscWaveShape = (oscWaveShape + (envelope * oscWaveShapeModEnv) + (lfo.linlin(-1, 1, 0, 1) * oscWaveShapeModLfo)).clip;
 			varSawWaveShape = oscWaveShape.linlin(0, 1, 0.51, 0.99);
 			signal = (
-				VarSaw.ar(freq0, 0, varSawWaveShape, oscMod0.linlin(0, 1, 0.5, 1))
-				+ VarSaw.ar(freq1, 0, varSawWaveShape, oscMod1.linlin(0, 1, 0.5, 1))
-				+ VarSaw.ar(freq2, 0, varSawWaveShape, oscMod2.linlin(0, 1, 0.5, 1))
-				+ VarSaw.ar(freq3, 0, varSawWaveShape, oscMod3.linlin(0, 1, 0.5, 1))
+				VarSaw.ar(freq0, 0, varSawWaveShape, oscMod0.linlin(0, 1, 0.4, 1))
+				+ VarSaw.ar(freq1, 0, varSawWaveShape, oscMod1.linlin(0, 1, 0.4, 1))
+				+ VarSaw.ar(freq2, 0, varSawWaveShape, oscMod2.linlin(0, 1, 0.4, 1))
+				+ VarSaw.ar(freq3, 0, varSawWaveShape, oscMod3.linlin(0, 1, 0.4, 1))
 			) * oscWaveShape.linlin(0, 1, 0.25, 0.1) * oscLevel;
 
 			// Noise
@@ -200,7 +200,7 @@ Engine_Oystercatcher : CroneEngine {
 			envAttack = 0.1, envRelease = 0.5,
 			lfoFreq = 20,
 			chorusSend = 0, delaySend = 0;
-			var i_nyquist = SampleRate.ir * 0.5, i_cFreq = 48.midicps, signal,
+			var i_nyquist = SampleRate.ir * 0.5, i_cFreq = 48.midicps, signal, noise,
 			lfo, killEnvelope, envelope, freqModRatio, filterCutoffRatio, filterCutoffModRatio;
 
 			// Envelopes
@@ -229,9 +229,11 @@ Engine_Oystercatcher : CroneEngine {
 			signal = VarSaw.ar(freq0, 0, oscWaveShape.linlin(0, 1, 0.505, 0.99)) * oscWaveShape.linlin(0, 1, 0.33, 0.15) * oscLevel;
 			signal = signal + VarSaw.ar(freq1, 0, 0.5, subOscLevel * 0.33);
 
-			// Noise
-			signal = signal + WhiteNoise.ar(noiseLevel);
-			signal = signal + LPF.ar(Crackle.ar(2.0, crackleLevel), 2500);
+			// Filtered noise
+			noise = WhiteNoise.ar(noiseLevel);
+			noise = noise + LPF.ar(Crackle.ar(2.0, crackleLevel), 2000);
+			noise = HPF.ar(noise, 300);
+			signal = signal + noise;
 
 			// LP filter
 			filterCutoffRatio = Select.kr((freq0 < i_cFreq), [
@@ -249,7 +251,7 @@ Engine_Oystercatcher : CroneEngine {
 			lpFilterCutoff = (lpFilterCutoff * filterCutoffModRatio).clip(20, 20000);
 
 			signal = RLPF.ar(in: signal, freq: lpFilterCutoff, rq: lpFilterResonance.linexp(0, 1, 1, 0.05));
-			// signal = RLPF.ar(in: signal, freq: lpFilterCutoff, rq: lpFilterResonance.linexp(0, 1, 1, 0.32)); // -24dB
+			signal = RLPF.ar(in: signal, freq: lpFilterCutoff, rq: lpFilterResonance.linexp(0, 1, 1, 0.32)); // -24dB
 
 			// Amp
 			signal = signal * envelope * killEnvelope * vel * amp * lfo.linlin(-1, 1, 1 - ampModLfo, 1) * 0.7;
@@ -315,7 +317,10 @@ Engine_Oystercatcher : CroneEngine {
 			arg in, out;
 			var signal;
 
-			signal = In.ar(in, 2) * 0.6;
+			signal = In.ar(in, 2);
+
+			// EQ (reduce lows)
+			signal = BLowShelf.ar(signal, 200, 1, -6);
 
 			// Compression etc
 			signal = CompanderD.ar(in: signal, thresh: 0.4, slopeBelow: 1, slopeAbove: 0.25, clampTime: 0.002, relaxTime: 0.01);
@@ -672,5 +677,13 @@ Engine_Oystercatcher : CroneEngine {
 		chorus.free;
 		delay.free;
 		mixer.free;
+
+		lfoBus.free;
+		ringModBus.free;
+		chorusBus.free;
+		delayBus.free;
+		mixerBus.free;
+		delayBuf.free;
+
 	}
 }

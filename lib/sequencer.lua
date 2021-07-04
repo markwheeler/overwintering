@@ -127,7 +127,7 @@ local function play_chord()
 
     local x_diff, y_diff = math.abs(current_x - prev_x), math.abs(current_y - prev_y)
     local distance = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
-    local interval = math.floor(util.linlin(0, 1, 0, 36, distance))
+    local interval = math.floor(util.linlin(0, 1, 0, 38, distance))
 
     -- TODO is this the right value?
     if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
@@ -221,25 +221,22 @@ local function play_perc(index)
     local trigger = Sequencer.triggers[trigger_index]
 
     -- Trigger distance from perc_start to note
-    local note_range = {chord_notes[1], chord_notes[1] + 48}
+    local note_range = {chord_notes[1], chord_notes[1] + 40}
     local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
     local sub_note_num = note_num - 5
     -- print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
 
-    -- Velocity varies with pitch
-    local velocity = util.linlin(note_range[1], note_range[2], 0.8, 0.4, note_num)
-    velocity = velocity + math.random() * 0.2
-
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
 
-    -- Trigger mod_a to osc level and crackle level
+    -- Trigger mod_b to osc level, crackle level and filter resonance
     params:set("perc_osc_level", util.linlin(0, 1, dyn_params.perc_osc_level_high, dyn_params.perc_osc_level_low, trigger.mod_a))
     params:set("perc_crackle_level", util.linlin(0, 1, dyn_params.perc_crackle_level_low, dyn_params.perc_crackle_level_high, trigger.mod_a))
-
-    -- Trigger mod_b to filter resonance
-    params:set("perc_lp_filter_resonance", util.linlin(0, 1, dyn_params.perc_lp_filter_resonance_high, dyn_params.perc_lp_filter_resonance_low, trigger.mod_b))
+    params:set("perc_lp_filter_resonance", util.linlin(0, 1, dyn_params.perc_lp_filter_resonance_high, dyn_params.perc_lp_filter_resonance_low, trigger.mod_a))
+    
+    -- Trigger mod_b to filter cutoff
+    params:set("perc_lp_filter_cutoff", util.linexp(0, 1, dyn_params.perc_lp_filter_cutoff_low, dyn_params.perc_lp_filter_cutoff_high, trigger.mod_b))
 
     -- Density to LFO freq
     params:set("perc_lfo_freq", util.linexp(0, 1, dyn_params.perc_lfo_freq_low, dyn_params.perc_lfo_freq_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm")))
@@ -248,13 +245,17 @@ local function play_perc(index)
     local num_triggers_norm = Sequencer.num_active_triggers / (TRIG_COLS * TRIG_ROWS)
     params:set("perc_env_release", util.linlin(0, 1, dyn_params.perc_env_release_low, dyn_params.perc_env_release_high, num_triggers_norm))
     params:set("perc_delay_send", util.linlin(0, 1, dyn_params.perc_delay_send_high, dyn_params.perc_delay_send_low, num_triggers_norm))
-    params:set("perc_lp_filter_cutoff", util.linexp(0, 1, dyn_params.perc_lp_filter_cutoff_low, dyn_params.perc_lp_filter_cutoff_high, num_triggers_norm))
 
     -- Trig x position to panning
     params:set("perc_panning", util.linlin(0, 1, dyn_params.perc_panning_low, dyn_params.perc_panning_high, trigger.x_grid_norm))
 
-    -- Trig x position to sub osc level
+    -- Trig y position to sub osc level
     params:set("perc_sub_osc_level", util.linlin(0, 1, dyn_params.perc_sub_osc_level_low, dyn_params.perc_sub_osc_level_high, trigger.y_grid_norm))
+
+    -- Velocity
+    local velocity = util.linlin(note_range[1], note_range[2], 0.8, 0.5, note_num)
+    -- local velocity = util.linlin(0, 1, 0.65, 0.8, params:get("perc_osc_level"))
+    velocity = velocity + math.random() * 0.2
 
     engine.percOn(
       trigger_index, -- voiceId

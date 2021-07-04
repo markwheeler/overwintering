@@ -23,7 +23,7 @@ local screen_dirty = true
 
 local VIEW_SLICES = 4 -- Num slices show before view cycles
 local NUM_VIEW_MODES = 4
-local view_mode = 3 -- Map, Stats, Clusters, Triggers
+local view_mode = 1 -- Map, Stats, Clusters, Triggers
 local view_countdown = VIEW_SLICES
 
 local specs = {}
@@ -88,6 +88,7 @@ function key(n, z)
       params:delta("play", 1)
 
     elseif n == 3 then
+      params:set("cycle_views", 0)
       view_mode = util.wrap(view_mode + 1, 1, NUM_VIEW_MODES)
       
     end
@@ -135,7 +136,7 @@ function init()
     id = "cycle_views",
     name = "Cycle Views",
     behavior = "toggle",
-    default = 0
+    default = 1
   }
 
   params:add {
