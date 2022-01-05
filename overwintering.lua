@@ -1,4 +1,4 @@
--- Migration
+-- Overwintering
 -- 1.0.0 @markeats @giovannilami
 --
 -- WIP
@@ -117,7 +117,7 @@ function init()
 
   -- Script params
   
-  params:add_separator("Migration")
+  params:add_separator("Overwintering")
 
   for _, v in ipairs(Trove.bird_data) do
     table.insert(bird_names, v.name)

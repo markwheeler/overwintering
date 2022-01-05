@@ -1,5 +1,5 @@
 // CroneEngine_Oystercatcher
-// Synth engine for migration.
+// Synth engine for Overwintering.
 //
 // This engine is fairly specific to the script – for a more general and
 // portable engine with a similar structure, see Molly the Poly.
