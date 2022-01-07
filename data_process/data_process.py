@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-import sys, os, csv
+import sys, os, csv, json
 from operator import itemgetter
 
 # Argument checks
 if len(sys.argv) != 3:
-    sys.exit(f"Usage: {sys.argv[0]} <Input CSV> <Species list CSV>")
+    sys.exit(f"Usage: {sys.argv[0]} <Input CSV> <Species list JSON>")
 
 inputFilePath = sys.argv[1]
 speciesListFilePath = sys.argv[2]
 
 if not inputFilePath.endswith(".csv"):
     sys.exit("Input file does not have CSV file extension.")
-if not speciesListFilePath.endswith(".csv"):
-    sys.exit("Species list file does not have CSV file extension.")
+if not speciesListFilePath.endswith(".json"):
+    sys.exit("Species list file does not have JSON file extension.")
 
 
 # Read input
@@ -27,7 +27,7 @@ for row in inputCsv:
 		inputList.append(row)
 	count += 1
 
-print(f"Read {str(count)} rows.")
+print(f"Read {str(count)} rows from input file.")
 
 # Sort
 
@@ -43,32 +43,40 @@ inputList = sorted(inputList, key=lambda x: int(x[2]), reverse=False)
 
 # Split by species
 
-speciesListCsv = csv.reader(open(speciesListFilePath, "r"), delimiter=",")
+speciesListJson = json.load(open(speciesListFilePath, "r"))
+print(f"Read {len(speciesListJson)} species from species list.")
 
 speciesCount = 0
-for species in speciesListCsv:
+for species in speciesListJson:
 
 	if speciesCount > 0:
 
-		speciesId = species[0]
+		speciesId = species["species_id"]
 
-		# Output
-		outputCsv = csv.writer(open(f"{speciesId}.csv", "w"))
+		# Bird attributes
+		speciesDict = {
+			"species_id":	speciesId,
+			"latin":		species["latin"],
+			"english":		species["english"],
+			"slices":		[]
+		}
 
-		# Names on first row
-		outputCsv.writerow([species[2], species[1], None, None])
-
+		# Slices
 		count = 0
 		for row in inputList:
 			if row[4] == speciesId:
-				outputCsv.writerow(row[:-1])
+				slice = {
+					"week":		row[2]
+				}
+				speciesDict["slices"].append(slice)
 				count += 1
 
+		# Output
 		if count:
-			print(f"Wrote {str(count)} rows to {speciesId}.csv ({species[2]})")
-		else:
-			os.remove(f"{speciesId}.csv")
+			filePath = f"{speciesId}.json"
+			json.dump(speciesDict, open(filePath, "w"), indent = 4)
+			print(f"Wrote {str(count)} rows to {filePath} ({species['english']})")
 
 	speciesCount += 1
 
-print(f"Done! Processed {speciesCount - 1} species.")
+print(f"Done!")
