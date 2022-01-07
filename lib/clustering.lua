@@ -25,7 +25,7 @@ function Clustering.kmeans(data, nclusters, init)
 
     -- NOTE: Changed this to a fixed value for reproducable results
     -- local i = math.random(1, #data)
-    local i = util.round(#data * 0.5)
+    local i = math.floor((#data * 0.5) + 0.5)
 
     centers[K] = {x = data[i].x, y = data[i].y}
     local D = {}

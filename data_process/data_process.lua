@@ -1,0 +1,353 @@
+-- Process CSV into multiple JSON files
+
+package.path = package.path .. ";../lib/?.lua;"
+local Json = require "json"
+local Clustering = require "clustering"
+
+local function round(number, quant)
+  if quant == 0 then
+    return number
+  else
+    return math.floor(number/(quant or 1) + 0.5) * (quant or 1)
+  end
+end
+
+local function linlin(slo, shi, dlo, dhi, f)
+  if f <= slo then
+    return dlo
+  elseif f >= shi then
+    return dhi
+  else
+    return (f-slo) / (shi-slo) * (dhi-dlo) + dlo
+  end
+end
+
+local function table_print(t)
+  for k, v in pairs(t) do
+    print(k .. "\t\t" .. tostring(v))
+  end
+end
+
+local function table_sort_by_values(t, ...)
+  local a = {...}
+  table.sort(
+    t,
+    function(u, v)
+      for i = 1, #a do
+        if u[a[i]] > v[a[i]] then
+          return false
+        end
+        if u[a[i]] < v[a[i]] then
+          return true
+        end
+      end
+    end
+  )
+end
+
+local function normalize_point(x, y, bird_x_offset, bird_y_offset, bird_scale)
+  x = linlin(-180, 180, 0, 1, (x - bird_x_offset) * bird_scale)
+  y = linlin(-90, 90, 0, 1, (y - bird_y_offset) * bird_scale)
+  return x, y
+end
+
+local function load_csv(file_path)
+  local DELIMITERS = ";\r\n"
+
+  local data = {}
+  local line_num = 0
+  local attributes = {}
+
+  for line in io.lines(file_path) do
+    line_num = line_num + 1
+
+    if line_num == 1 then
+      -- Get attribute names from headers
+      for val in string.gmatch(line, "([^" .. DELIMITERS .. "]+)") do
+        table.insert(attributes, val)
+      end
+    else
+      -- Split the row
+      local row = {}
+      local count = 1
+      for v in string.gmatch(line, "([^" .. DELIMITERS .. "]+)") do
+        local value = v
+        if attributes[count] ~= "species_id" then
+          value = tonumber(value)
+        end
+        row[attributes[count]] = value
+        count = count + 1
+      end
+      table.insert(data, row)
+    end
+  end
+
+  print("Read " .. line_num .. " rows from " .. file_path)
+  return data
+end
+
+local function load_species_json(file_path)
+  local input_json = ""
+  for line in io.lines(file_path) do
+    input_json = input_json .. line
+  end
+
+  local species_list = Json.decode(input_json)
+  print("Loaded " .. #species_list .. " species from JSON")
+  return species_list
+end
+
+local function split_by_species(data, species_list)
+  local split_data = {}
+
+  local count = 0
+  for _, v in ipairs(data) do
+    if not split_data[v.species_id] then
+      split_data[v.species_id] = {}
+      count = count + 1
+    end
+    table.insert(split_data[v.species_id], v)
+  end
+
+  print("Found " .. count .. " species in input CSV")
+  return split_data
+end
+
+local function create_bird(bird_data, species)
+  -- Sort
+  table_sort_by_values(bird_data, "year", "week", "y", "x")
+
+  -- Create bird object
+  local bird = {
+    species_id = species.species_id,
+    latin_name = species.latin,
+    english_name = species.english,
+    num_slices = 0,
+    slices = {}
+  }
+
+  local slice
+
+  for _, v in ipairs(bird_data) do
+    -- Add a new slice if need be
+    if bird.num_slices == 0 or v.week ~= bird.slices[bird.num_slices].week or v.year ~= bird.slices[bird.num_slices].year then
+      slice = {
+        week = v.week,
+        year = v.year,
+        area_norm = 0,
+        density_norm = 0,
+        num_points_norm = 0,
+        points = {},
+        clusters = {},
+        -- Temp below
+        area = 0,
+        density = 0,
+        num_points = 0
+      }
+      table.insert(bird.slices, slice)
+      bird.num_slices = bird.num_slices + 1
+    end
+
+    -- Add point
+    local point = {
+      x = v.x,
+      y = v.y
+    }
+    table.insert(bird.slices[bird.num_slices].points, point)
+    slice.num_points = slice.num_points + 1
+  end
+
+  print("Created " .. bird.num_slices .. " slices for " .. bird.species_id)
+
+  return bird
+end
+
+local function process_bird(bird)
+
+  local MAX_NUM_CLUSTERS = 4
+  local AREA_GRID_COLS = 20
+  local AREA_GRID_ROWS = AREA_GRID_COLS / 2
+
+  local min_x, max_x = 180, -180
+  local min_y, max_y = 90, -90
+  local min_points, max_points = 9999999, 0
+  local min_area, max_area = 9999999, 0
+  local min_density, max_density = 9999999, 0
+  local min_cluster_points, max_cluster_points = 9999999, 0
+
+  -- Store overall min/max xy
+  for _, s in ipairs(bird.slices) do
+    for _, p in ipairs(s.points) do
+      if p.x < min_x then
+        min_x = p.x
+      end
+      if p.x > max_x then
+        max_x = p.x
+      end
+      if p.y < min_y then
+        min_y = p.y
+      end
+      if p.y > max_y then
+        max_y = p.y
+      end
+    end
+  end
+
+  -- Generate values for easy scaling/centering later
+
+  local x_range = max_x - min_x
+  local y_range = max_y - min_y
+
+  local scale = math.min(360 / x_range, 180 / y_range)
+  local x_offset = x_range / 2 + min_x
+  local y_offset = y_range / 2 + min_y
+
+  -- Iterate slices
+  for _, s in ipairs(bird.slices) do
+
+    -- Create area grid
+    local area_grid = {}
+    for gx = 1, AREA_GRID_COLS do
+      table.insert(area_grid, {})
+      for gy = 1, AREA_GRID_ROWS do
+        table.insert(area_grid[gx], false)
+      end
+    end
+
+    -- Calculate normalized points
+    for _, p in ipairs(s.points) do
+
+      p.x, p.y = normalize_point(p.x, p.y, x_offset, y_offset, scale)
+
+      -- Update area grid
+      local gx = round(linlin(0, 1, 0.5, AREA_GRID_COLS + 0.499, p.x))
+      local gy = round(linlin(0, 1, 0.5, AREA_GRID_ROWS + 0.499, p.y))
+      area_grid[gx][gy] = true
+
+      -- Store min/max points
+      if s.num_points < min_points then min_points = s.num_points end
+      if s.num_points > max_points then max_points = s.num_points end
+    end
+
+    -- Calculate area
+    s.area = 0
+    for _, col in ipairs(area_grid) do
+      for _, cell in ipairs(col) do
+        if cell then
+          s.area = s.area + 1
+        end
+      end
+    end
+    if s.area < min_area then min_area = s.area end
+    if s.area > max_area then max_area = s.area end
+
+    -- Calculate density
+    s.density = s.num_points / s.area
+    if s.density < min_density then min_density = s.density end
+    if s.density > max_density then max_density = s.density end
+
+    -- Calculate clusters
+    -- Note: Could be smarter about estimating number of clusters but just basing on number points for now
+    local num_clusters = round(linlin(min_points, max_points, 2, MAX_NUM_CLUSTERS, s.num_points))
+
+    -- Skip clusters if not enough points to be meaningful
+    if s.num_points > num_clusters then
+      local centers, point_clusters, loss = Clustering.kmeans(s.points, num_clusters, "kmeans++")
+
+      -- Store centroids and number points per cluster
+      for i = 1, num_clusters do
+        local cluster = {
+          centroid = centers[i],
+          num_points = 0
+        }
+        -- cluster.centroid.x, cluster.centroid.y = normalize_point(centers[i].x, centers[i].y, x_offset, y_offset, scale) --TODO remove
+        for _, v in ipairs(point_clusters) do
+          if v == i then
+            cluster.num_points = cluster.num_points + 1
+          end
+        end
+        if cluster.num_points < min_cluster_points then min_cluster_points = cluster.num_points end
+        if cluster.num_points > max_cluster_points then max_cluster_points = cluster.num_points end
+        table.insert(s.clusters, cluster)
+      end
+
+      -- Sort clusters by y position
+      table.sort(s.clusters, function(a, b)
+        return a.centroid.y > b.centroid.y
+      end)
+    end
+
+  end
+
+  -- Normalize
+  for _, s in ipairs(bird.slices) do
+
+    s.num_points_norm = linlin(min_points, max_points, 0, 1, s.num_points)
+    s.area_norm = linlin(min_area, max_area, 0, 1, s.area)
+    s.density_norm = linlin(min_density, max_density, 0, 1, s.density)
+
+    for _, c in ipairs(s.clusters) do
+      c.num_points_norm = linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points)
+    end
+  end
+
+  print("Processed " .. bird.species_id)
+
+  return bird
+end
+
+local function cleanup_bird(bird)
+  -- Remove attributes we no longer need
+  for _, s in ipairs(bird.slices) do
+    s.area = nil
+    s.density = nil
+    s.num_points = nil
+    for _, c in ipairs(s.clusters) do
+      c.num_points = nil
+    end
+  end
+
+  return bird
+end
+
+local function write_bird_json(bird, output_folder)
+  local json_data = Json.encode(bird)
+  output_file = io.open(output_folder .. bird.species_id .. ".json", "w")
+  output_file:write(json_data)
+  output_file:close()
+  print("Wrote " .. bird.species_id .. " – " .. bird.english_name)
+end
+
+local function init()
+  if #arg ~= 3 then
+    print("Usage: lua data_process.lua <Input CSV> <Species list JSON> <Output folder>")
+    os.exit(false)
+  end
+
+  local input_file_path = arg[1]
+  local species_list_file_path = arg[2]
+  local output_folder = arg[3]
+
+  -- TODO check file extensions of these
+
+  local data = load_csv(input_file_path)
+  local species_list = load_species_json(species_list_file_path)
+  local split_data = split_by_species(data, species_list)
+  for k, v in pairs(split_data) do
+    local species
+    for _, s in pairs(species_list) do
+      if tostring(s.species_id) == k then
+        species = s
+        break
+      end
+    end
+    local bird = create_bird(v, species)
+    bird = process_bird(bird)
+    bird = cleanup_bird(bird)
+    write_bird_json(bird, output_folder)
+  end
+
+  print("Done!")
+end
+
+init()
