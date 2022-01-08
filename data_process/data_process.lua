@@ -113,6 +113,35 @@ local function split_by_species(data, species_list)
   return split_data
 end
 
+
+local function increment_week(week, year)
+  week = week + 1
+  if week > 52 then
+    week = 1
+    year = year + 1
+  end
+  return week, year
+end
+
+
+local function create_slice(week, year)
+  local slice = {
+    week = week,
+    year = year,
+    area_norm = 0,
+    density_norm = 0,
+    num_points_norm = 0,
+    points = {},
+    clusters = {},
+    -- Temp below
+    area = 0,
+    density = 0,
+    num_points = 0
+  }
+  return slice
+end
+
+
 local function create_bird(bird_data, species)
   -- Sort
   table_sort_by_values(bird_data, "year", "week", "y", "x")
@@ -131,19 +160,20 @@ local function create_bird(bird_data, species)
   for _, v in ipairs(bird_data) do
     -- Add a new slice if need be
     if bird.num_slices == 0 or v.week ~= bird.slices[bird.num_slices].week or v.year ~= bird.slices[bird.num_slices].year then
-      slice = {
-        week = v.week,
-        year = v.year,
-        area_norm = 0,
-        density_norm = 0,
-        num_points_norm = 0,
-        points = {},
-        clusters = {},
-        -- Temp below
-        area = 0,
-        density = 0,
-        num_points = 0
-      }
+
+      -- Check if we need to fill in a gap with empty slices
+      if bird.num_slices > 0 then
+        local expected_week, expected_year = increment_week(bird.slices[bird.num_slices].week, bird.slices[bird.num_slices].year)
+
+        while expected_week ~= v.week do  
+          slice = create_slice(expected_week, expected_year)
+          table.insert(bird.slices, slice)
+          bird.num_slices = bird.num_slices + 1
+          expected_week, expected_year = increment_week(expected_week, expected_year)
+        end
+      end
+
+      slice = create_slice(v.week, v.year)
       table.insert(bird.slices, slice)
       bird.num_slices = bird.num_slices + 1
     end
@@ -242,9 +272,11 @@ local function process_bird(bird)
     if s.area > max_area then max_area = s.area end
 
     -- Calculate density
-    s.density = s.num_points / s.area
-    if s.density < min_density then min_density = s.density end
-    if s.density > max_density then max_density = s.density end
+    if s.area > 0 then
+      s.density = s.num_points / s.area
+      if s.density < min_density then min_density = s.density end
+      if s.density > max_density then max_density = s.density end
+    end
 
     -- Calculate clusters
     -- Note: Could be smarter about estimating number of clusters but just basing on number points for now
@@ -257,10 +289,11 @@ local function process_bird(bird)
       -- Store centroids and number points per cluster
       for i = 1, num_clusters do
         local cluster = {
-          centroid = centers[i],
+          x = centers[i].x,
+          y = centers[i].y,
           num_points = 0
         }
-        -- cluster.centroid.x, cluster.centroid.y = normalize_point(centers[i].x, centers[i].y, x_offset, y_offset, scale) --TODO remove
+        
         for _, v in ipairs(point_clusters) do
           if v == i then
             cluster.num_points = cluster.num_points + 1
@@ -273,7 +306,7 @@ local function process_bird(bird)
 
       -- Sort clusters by y position
       table.sort(s.clusters, function(a, b)
-        return a.centroid.y > b.centroid.y
+        return a.y > b.y
       end)
     end
 
@@ -289,6 +322,7 @@ local function process_bird(bird)
     for _, c in ipairs(s.clusters) do
       c.num_points_norm = linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points)
     end
+    
   end
 
   print("Processed " .. bird.species_id)
@@ -315,7 +349,7 @@ local function write_bird_json(bird, output_folder)
   output_file = io.open(output_folder .. bird.species_id .. ".json", "w")
   output_file:write(json_data)
   output_file:close()
-  print("Wrote " .. bird.species_id .. " – " .. bird.english_name)
+  print("Wrote " .. bird.species_id .. ".json – " .. bird.english_name)
 end
 
 local function init()
@@ -341,10 +375,12 @@ local function init()
         break
       end
     end
-    local bird = create_bird(v, species)
-    bird = process_bird(bird)
-    bird = cleanup_bird(bird)
-    write_bird_json(bird, output_folder)
+    if species then
+      local bird = create_bird(v, species)
+      bird = process_bird(bird)
+      bird = cleanup_bird(bird)
+      write_bird_json(bird, output_folder)
+    end
   end
 
   print("Done!")
