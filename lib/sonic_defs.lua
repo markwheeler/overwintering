@@ -273,7 +273,7 @@ SonicDefs["bomgar"] = {
     perc_lfo_freq_low = 0.05,
     perc_lfo_freq_high = 400,
     perc_delay_send_low = 0,
-    perc_delay_send_high = 0.7,
+    perc_delay_send_high = 0.65,
 
     -- FX
     fx_delay_feedback_low = 0.2,

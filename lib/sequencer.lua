@@ -20,7 +20,7 @@ local chord_notes = {}
 local perc_notes_this_slice = {}
 local perc_steps_this_slice = 0
 
-local TRIG_RANGE = 3 -- LatLong Degrees
+local TRIG_RANGE = 0.06
 local TRIG_COLS = 6
 local TRIG_ROWS = 3
 local TRIG_DISPLAY_TIME = 28 -- In steps
@@ -34,8 +34,8 @@ local function generate_triggers(bird_index)
   local bird = Trove.get_bird(bird_index)
 
   Sequencer.triggers = {}
-  local trig_x_spacing = (bird.max_x - bird.min_x) / (TRIG_COLS + 1)
-  local trig_y_spacing = (bird.max_y - bird.min_y) / (TRIG_ROWS + 1)
+  local trig_x_spacing = 1 / (TRIG_COLS + 1)
+  local trig_y_spacing = 1 / (TRIG_ROWS + 1)
 
   local min_distance, max_distance = 999999, 0
 
@@ -45,18 +45,17 @@ local function generate_triggers(bird_index)
       local trig = {}
       trig.active = false
       trig.display_timer = 0
-      trig.x = c * trig_x_spacing + bird.min_x
-      trig.y = r * trig_y_spacing + bird.min_y
-      trig.x_norm, trig.y_norm = Trove.normalize_point(trig.x, trig.y, bird.x_offset, bird.y_offset, bird.scale)
+      trig.x = c * trig_x_spacing
+      trig.y = r * trig_y_spacing
       trig.x_grid_norm = util.linlin(1, TRIG_COLS, 0, 1, c)
       trig.y_grid_norm = util.linlin(1, TRIG_ROWS, 1, 0, r)
-      trig.screen_x = util.round(trig.x_norm * 126 + 1)
-      trig.screen_y = util.round((1 - trig.y_norm) * 62 + 1)
+      trig.screen_x = util.round(trig.x * 126 + 1)
+      trig.screen_y = util.round((1 - trig.y) * 62 + 1)
       trig.mod_a = util.linlin(1, TRIG_COLS * TRIG_ROWS, 0, 1, (r - 1 ) * TRIG_COLS + c)
       trig.mod_b = util.linlin(1, TRIG_COLS * TRIG_ROWS, 1, 0, (c - 1 ) * TRIG_ROWS + r)
 
       -- Calculate distance from perc_start
-      local x_diff, y_diff = math.abs(trig.x_norm - sonic_def.perc_start_x), math.abs((1 - trig.y_norm) * 0.5 - sonic_def.perc_start_y)
+      local x_diff, y_diff = math.abs(trig.x - sonic_def.perc_start_x), math.abs((1 - trig.y) * 0.5 - sonic_def.perc_start_y)
       trig.distance_from_root = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
       if trig.distance_from_root < min_distance then min_distance = trig.distance_from_root end
       if trig.distance_from_root > max_distance then max_distance = trig.distance_from_root end
@@ -66,9 +65,9 @@ local function generate_triggers(bird_index)
     end
   end
 
-  -- Normalize distances
+  -- Normalize distance from root
   for _, t in ipairs(Sequencer.triggers) do
-    t.distance_from_root  = util.linlin(min_distance, max_distance, 0, 1, t.distance_from_root)
+    t.distance_from_root = util.linlin(min_distance, max_distance, 0, 1, t.distance_from_root)
   end
 
 end
@@ -86,6 +85,7 @@ local function update_triggers()
   end)
 
   -- TODO Perf test
+  -- Activate triggers
   Sequencer.num_active_triggers = 0
   for _, t in ipairs(Sequencer.triggers) do
     t.active = false
@@ -157,11 +157,12 @@ local function play_chord()
       end
     end
 
-    print("--- chordOn", Sequencer.slice_index)
-    for i = 1, #chord_notes do
-      print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-    end
-    print("---")
+    -- TODO remove
+    -- print("--- chordOn", Sequencer.slice_index)
+    -- for i = 1, #chord_notes do
+    --   print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
+    -- end
+    -- print("---")
 
     local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
@@ -182,6 +183,7 @@ local function generate_perc_notes()
     perc_steps_this_slice = 24
   end
 
+  -- TODO remove?
   -- if Sequencer.num_active_triggers < 8 then
   --   perc_steps_this_slice = 8
   -- elseif Sequencer.num_active_triggers < 12 then
@@ -200,6 +202,7 @@ local function generate_perc_notes()
     end
   end
 
+  -- TODO remove?
   -- Insert rests randomly
   -- while #perc_notes_this_slice < perc_steps_this_slice do
   --   table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
@@ -225,16 +228,15 @@ local function play_perc(index)
     local trigger = Sequencer.triggers[trigger_index]
 
     -- Trigger distance from perc_start to note
-    local note_range = {chord_notes[1], chord_notes[1] + 40}
+    local note_range = {chord_notes[1], chord_notes[1] + 38}
     local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
     local sub_note_num = note_num - 5
-    -- print(util.round(trigger.distance_from_root, 0.1), note_num, MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
 
-    -- Trigger mod_b to osc level, crackle level and filter resonance
+    -- Trigger mod_a to osc level, crackle level and filter resonance
     params:set("perc_osc_level", util.linlin(0, 1, dyn_params.perc_osc_level_high, dyn_params.perc_osc_level_low, trigger.mod_a))
     params:set("perc_crackle_level", util.linlin(0, 1, dyn_params.perc_crackle_level_low, dyn_params.perc_crackle_level_high, trigger.mod_a))
     params:set("perc_lp_filter_resonance", util.linlin(0, 1, dyn_params.perc_lp_filter_resonance_high, dyn_params.perc_lp_filter_resonance_low, trigger.mod_a))
@@ -356,7 +358,7 @@ end
 
 local function slice_changed()
   play_chord()
-  -- update_triggers() -- TODO
+  update_triggers()
   generate_perc_notes()
   Sequencer.slice_changed_callback()
 end
@@ -381,7 +383,7 @@ function Sequencer.bird_changed(index)
   Sequencer.step_index = 1
 
   -- Triggers
-  -- generate_triggers(bird_index) -- TODO
+  generate_triggers(bird_index)
 
   -- Set engine params
   for k, v in pairs(sonic_def.params) do
