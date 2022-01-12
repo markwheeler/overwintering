@@ -286,6 +286,14 @@ local function process_bird(bird)
       if s.num_points > max_points then max_points = s.num_points end
     end
 
+    -- Update min/max x/y if no points
+    if s.num_points == 0 then
+      s.min_x = min_x
+      s.max_x = max_x
+      s.min_y = min_y
+      s.max_y = max_y
+    end
+
     -- Calculate area
     s.area = 0
     for _, col in ipairs(area_grid) do
