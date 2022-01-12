@@ -4,6 +4,8 @@ package.path = package.path .. ";../lib/?.lua;"
 local Json = require "json"
 local Clustering = require "clustering"
 
+local MAX_NUM_CLUSTERS = 4
+
 local function round(number, quant)
   if quant == 0 then
     return number
@@ -86,16 +88,18 @@ local function load_csv(file_path)
   return data
 end
 
-local function load_species_json(file_path)
+
+local function load_species_list(file_path)
   local input_json = ""
   for line in io.lines(file_path) do
     input_json = input_json .. line
   end
 
   local species_list = Json.decode(input_json)
-  print("Loaded " .. #species_list .. " species from JSON")
+  print("Loaded " .. #species_list .. " species from " .. file_path)
   return species_list
 end
+
 
 local function split_by_species(data, species_list)
   local split_data = {}
@@ -133,10 +137,18 @@ local function create_slice(week, year)
     num_points_norm = 0,
     points = {},
     clusters = {},
+    min_x_norm = 0,
+    max_x_norm = 0,
+    min_y_norm = 0,
+    max_y_norm = 0,
     -- Temp below
     area = 0,
     density = 0,
-    num_points = 0
+    num_points = 0,
+    min_x = 180,
+    max_x = -180,
+    min_y = 90,
+    max_y = -90,
   }
   return slice
 end
@@ -194,7 +206,6 @@ end
 
 local function process_bird(bird)
 
-  local MAX_NUM_CLUSTERS = 4
   local AREA_GRID_COLS = 20
   local AREA_GRID_ROWS = AREA_GRID_COLS / 2
 
@@ -205,21 +216,37 @@ local function process_bird(bird)
   local min_density, max_density = 9999999, 0
   local min_cluster_points, max_cluster_points = 9999999, 0
 
-  -- Store overall min/max xy
+  
   for _, s in ipairs(bird.slices) do
+    
+    -- Store slice min/max xy
     for _, p in ipairs(s.points) do
-      if p.x < min_x then
-        min_x = p.x
+      if p.x < s.min_x then
+        s.min_x = p.x
       end
-      if p.x > max_x then
-        max_x = p.x
+      if p.x > s.max_x then
+        s.max_x = p.x
       end
-      if p.y < min_y then
-        min_y = p.y
+      if p.y < s.min_y then
+        s.min_y = p.y
       end
-      if p.y > max_y then
-        max_y = p.y
+      if p.y > s.max_y then
+        s.max_y = p.y
       end
+    end
+
+    -- Store overall min/max xy
+    if s.min_x < min_x then
+      min_x = s.min_x
+    end
+    if s.max_x > max_x then
+      max_x = s.max_x
+    end
+    if s.min_y < min_y then
+      min_y = s.min_y
+    end
+    if s.max_y > max_y then
+      max_y = s.max_y
     end
   end
 
@@ -315,6 +342,9 @@ local function process_bird(bird)
   -- Normalize
   for _, s in ipairs(bird.slices) do
 
+    s.min_x_norm, s.min_y_norm = normalize_point(s.min_x, s.min_y, x_offset, y_offset, scale)
+    s.max_x_norm, s.max_y_norm = normalize_point(s.max_x, s.max_y, x_offset, y_offset, scale)
+
     s.num_points_norm = linlin(min_points, max_points, 0, 1, s.num_points)
     s.area_norm = linlin(min_area, max_area, 0, 1, s.area)
     s.density_norm = linlin(min_density, max_density, 0, 1, s.density)
@@ -336,6 +366,10 @@ local function cleanup_bird(bird)
     s.area = nil
     s.density = nil
     s.num_points = nil
+    s.min_x = nil
+    s.max_x = nil
+    s.min_y = nil
+    s.max_y = nil
     for _, c in ipairs(s.clusters) do
       c.num_points = nil
     end
@@ -365,7 +399,7 @@ local function init()
   -- TODO check file extensions of these
 
   local data = load_csv(input_file_path)
-  local species_list = load_species_json(species_list_file_path)
+  local species_list = load_species_list(species_list_file_path)
   local split_data = split_by_species(data, species_list)
   for k, v in pairs(split_data) do
     local species

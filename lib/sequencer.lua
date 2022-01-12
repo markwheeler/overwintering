@@ -122,51 +122,55 @@ local function play_chord()
   local prev_x = sonic_def.chord_start_x
   local prev_y = sonic_def.chord_start_y
 
-  for i = 1, #clusters do
-    current_x, current_y = clusters[i].centroid.x_norm, clusters[i].centroid.y_norm * 0.5
+  local num_clusters = #clusters
+  if num_clusters > 0 then
 
-    local x_diff, y_diff = math.abs(current_x - prev_x), math.abs(current_y - prev_y)
-    local distance = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
-    local interval = math.floor(util.linlin(0, 1, 0, 38, distance))
+    for i = 1, num_clusters do
+      current_x, current_y = clusters[i].x, clusters[i].y * 0.5
 
-    -- TODO is this the right value?
-    if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
-    interval = math.min(interval, 22)
+      local x_diff, y_diff = math.abs(current_x - prev_x), math.abs(current_y - prev_y)
+      local distance = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
+      local interval = math.floor(util.linlin(0, 1, 0, 38, distance))
 
-    if i == 1 then
-      for n = 1, Trove.MAX_NUM_CLUSTERS do
-        chord_notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
+      -- TODO is this the right value?
+      if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
+      interval = math.min(interval, 22)
+
+      if i == 1 then
+        for n = 1, Trove.MAX_NUM_CLUSTERS do
+          chord_notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
+        end
+      else
+        chord_notes[i] = chord_notes[i - 1] + interval
       end
-    else
-      chord_notes[i] = chord_notes[i - 1] + interval
+      osc_mods[i] = clusters[i].num_points_norm
+
+      prev_x, prev_y = current_x, current_y
     end
-    osc_mods[i] = clusters[i].num_points_norm
+    
+    chord_notes = MusicUtil.snap_notes_to_array(chord_notes, sonic_def.musical_scale)
 
-    prev_x, prev_y = current_x, current_y
-  end
-  
-  chord_notes = MusicUtil.snap_notes_to_array(chord_notes, sonic_def.musical_scale)
-
-  -- Iterate the scale and remove any intervals of < 3 ST
-  for i = 2, #chord_notes do
-    if chord_notes[i] - chord_notes[i - 1] < 3 then
-      chord_notes[i] = chord_notes[i - 1] - 12
+    -- Iterate the scale and remove any intervals of < 3 ST
+    for i = 2, #chord_notes do
+      if chord_notes[i] - chord_notes[i - 1] < 3 then
+        chord_notes[i] = chord_notes[i - 1] - 12
+      end
     end
+
+    print("--- chordOn", Sequencer.slice_index)
+    for i = 1, #chord_notes do
+      print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
+    end
+    print("---")
+
+    local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
+
+    engine.chordOn(
+      Sequencer.slice_index, -- voiceId
+      note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
+      osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
+    )
   end
-
-  print("--- chordOn", Sequencer.slice_index)
-  for i = 1, #chord_notes do
-    print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-  end
-  print("---")
-
-  local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
-
-  engine.chordOn(
-    Sequencer.slice_index, -- voiceId
-    note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
-    osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
-  )
 
 end
 
@@ -352,7 +356,7 @@ end
 
 local function slice_changed()
   play_chord()
-  update_triggers()
+  -- update_triggers() -- TODO
   generate_perc_notes()
   Sequencer.slice_changed_callback()
 end
@@ -364,7 +368,12 @@ function Sequencer.bird_changed(index)
 
   -- Store info
   bird_index = index
-  sonic_def = SonicDefs[Trove.get_bird(bird_index).id]
+  sonic_def = SonicDefs[Trove.get_bird(bird_index).species_id]
+  if not sonic_def then
+    local random_sonic_def = next(SonicDefs)
+    print("No sonic def found. Using " .. random_sonic_def)
+    sonic_def = SonicDefs[random_sonic_def]
+  end
   num_slices = Trove.get_bird(bird_index).num_slices
 
   -- Set state
@@ -372,7 +381,7 @@ function Sequencer.bird_changed(index)
   Sequencer.step_index = 1
 
   -- Triggers
-  generate_triggers(bird_index)
+  -- generate_triggers(bird_index) -- TODO
 
   -- Set engine params
   for k, v in pairs(sonic_def.params) do

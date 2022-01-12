@@ -101,7 +101,7 @@ function init()
 
   -- Load data
 
-  Trove.load_folder(norns.state.path .. "data/")
+  Trove.load_birds(norns.state.path .. "data/")
 
   local bird_names = {}
 
@@ -120,7 +120,7 @@ function init()
   params:add_separator("Overwintering")
 
   for _, v in ipairs(Trove.bird_data) do
-    table.insert(bird_names, v.name)
+    table.insert(bird_names, v.english_name)
   end
 
   params:add {
