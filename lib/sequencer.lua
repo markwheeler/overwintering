@@ -372,9 +372,8 @@ function Sequencer.bird_changed(index)
   bird_index = index
   sonic_def = SonicDefs[Trove.get_bird(bird_index).species_id]
   if not sonic_def then
-    local random_sonic_def = next(SonicDefs)
-    print("No sonic def found. Using " .. random_sonic_def)
-    sonic_def = SonicDefs[random_sonic_def]
+    sonic_def = SonicDefs.default
+    print("No sonic def found. Using default.")
   end
   num_slices = Trove.get_bird(bird_index).num_slices
 

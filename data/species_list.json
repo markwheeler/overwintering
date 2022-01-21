@@ -1,3 +1,7 @@
 [
-    {"species_id": "bomgar", "latin": "Bombycilla Garrulus", "english": "Bohemian Waxwing"}
+    {"species_id": 52744, "latin": "Ciconia ciconia", "english": "White Stork"},
+    {"species_id": 53144, "latin": "Buteo lagopus", "english": "Rough-legged Buzzard"},
+    {"species_id": 53434, "latin": "Coturnix coturnix", "english": "Common Quail"},
+    {"species_id": 53560, "latin": "Grus grus", "english": "Common Crane"},
+    {"species_id": 53943, "latin": "Calidris pugnax", "english": "Ruff"}
 ]

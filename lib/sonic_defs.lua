@@ -224,8 +224,8 @@ SonicDefs["53144"] = {
   }
 }
 
--- Bohemian Waxwing
-SonicDefs["bomgar"] = {
+-- Default
+SonicDefs["default"] = {
 
   -- Key
   musical_scale = MusicUtil.generate_scale(33, "Major", 8), -- A0
