@@ -5,6 +5,7 @@ local Json = require "json"
 local Clustering = require "clustering"
 
 local MAX_NUM_CLUSTERS = 4
+local ROUND_QUANT = 0.001 -- This just helps keep the output file size down
 
 local function round(number, quant)
   if quant == 0 then
@@ -275,6 +276,8 @@ local function process_bird(bird)
     for _, p in ipairs(s.points) do
 
       p.x, p.y = normalize_point(p.x, p.y, x_offset, y_offset, scale)
+      p.x = round(p.x, ROUND_QUANT)
+      p.y = round(p.y, ROUND_QUANT)
 
       -- Update area grid
       local gx = round(linlin(0, 1, 0.5, AREA_GRID_COLS + 0.499, p.x))
@@ -324,8 +327,8 @@ local function process_bird(bird)
       -- Store centroids and number points per cluster
       for i = 1, num_clusters do
         local cluster = {
-          x = centers[i].x,
-          y = centers[i].y,
+          x = round(centers[i].x, ROUND_QUANT),
+          y = round(centers[i].y, ROUND_QUANT),
           num_points = 0
         }
         
@@ -352,13 +355,17 @@ local function process_bird(bird)
 
     s.min_x_norm, s.min_y_norm = normalize_point(s.min_x, s.min_y, x_offset, y_offset, scale)
     s.max_x_norm, s.max_y_norm = normalize_point(s.max_x, s.max_y, x_offset, y_offset, scale)
+    s.min_x_norm = round(s.min_x_norm, ROUND_QUANT)
+    s.min_y_norm = round(s.min_y_norm, ROUND_QUANT)
+    s.max_x_norm = round(s.max_x_norm, ROUND_QUANT)
+    s.max_y_norm = round(s.max_y_norm, ROUND_QUANT)
 
-    s.num_points_norm = linlin(min_points, max_points, 0, 1, s.num_points)
-    s.area_norm = linlin(min_area, max_area, 0, 1, s.area)
-    s.density_norm = linlin(min_density, max_density, 0, 1, s.density)
+    s.num_points_norm = round(linlin(min_points, max_points, 0, 1, s.num_points), ROUND_QUANT)
+    s.area_norm = round(linlin(min_area, max_area, 0, 1, s.area), ROUND_QUANT)
+    s.density_norm = round(linlin(min_density, max_density, 0, 1, s.density), ROUND_QUANT)
 
     for _, c in ipairs(s.clusters) do
-      c.num_points_norm = linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points)
+      c.num_points_norm = round(linlin(min_cluster_points, max_cluster_points, 0, 1, c.num_points), ROUND_QUANT)
     end
     
   end
