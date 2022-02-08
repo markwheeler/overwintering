@@ -319,7 +319,7 @@ local function step_changed()
     util.linlin(0, 1, dyn_params.chord_amp_mod_lfo_low, dyn_params.chord_amp_mod_lfo_high, area)
   )
  
-  -- Mass to LP filter cutoff and delay feedback
+  -- Mass to LP filter cutoff and delay feedback and decay/release/amp
   local mass = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "num_points_norm")
   params:set(
     "chord_lp_filter_cutoff",
@@ -328,6 +328,18 @@ local function step_changed()
   params:set(
     "fx_delay_feedback",
     util.linlin(0, 1, dyn_params.fx_delay_feedback_high, dyn_params.fx_delay_feedback_low, mass)
+  )
+  params:set(
+    "chord_env_decay",
+    util.linlin(0, 1, dyn_params.chord_env_decay_low, dyn_params.chord_env_decay_high, mass)
+  )
+  params:set(
+    "chord_env_release",
+    util.linlin(0, 1, dyn_params.chord_env_release_low, dyn_params.chord_env_release_high, mass)
+  )
+  params:set(
+    "chord_amp",
+    util.linlin(0, 1, dyn_params.chord_amp_low, dyn_params.chord_amp_high, mass)
   )
 
   -- Density to noise level

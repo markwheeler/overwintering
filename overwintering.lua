@@ -34,6 +34,8 @@ specs.TIME = ControlSpec.new(0.1, 12, "lin", 0, 4.5, "s")
 
 local function bird_changed()
   Sequencer.bird_changed(params:get("species"))
+  view_mode = 1
+  view_countdown = VIEW_SLICES
 end
 
 

@@ -140,7 +140,7 @@ Engine_Oystercatcher : CroneEngine {
 			) * oscWaveShape.linlin(0, 1, 0.25, 0.1) * oscLevel;
 
 			// Noise
-			signal = signal + WhiteNoise.ar(noiseLevel.linlin(0, 1, 0.004, 0.5));
+			signal = signal + WhiteNoise.ar(noiseLevel.linlin(0, 1, 0, 0.5));
 
 			// LP filter tracks freq0
 			filterCutoffRatio = Select.kr((freq0 < i_cFreq), [
@@ -322,7 +322,7 @@ Engine_Oystercatcher : CroneEngine {
 			// EQ (reduce lows)
 			signal = BLowShelf.ar(signal, 200, 1, -6);
 
-			// Compression etc
+			// Compression and clipping
 			signal = CompanderD.ar(in: signal, thresh: 0.4, slopeBelow: 1, slopeAbove: 0.25, clampTime: 0.002, relaxTime: 0.01);
 			signal = tanh(signal).softclip;
 
