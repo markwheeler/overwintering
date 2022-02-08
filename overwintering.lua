@@ -27,7 +27,7 @@ local view_mode = 1 -- Map, Stats, Clusters, Triggers
 local view_countdown = VIEW_SLICES
 
 local specs = {}
-specs.TIME = ControlSpec.new(0.1, 12, "lin", 0, 4.5, "s")
+specs.TIME = ControlSpec.new(0.1, 12, "lin", 0, 6.8, "s")
 
 
 -- Functions
