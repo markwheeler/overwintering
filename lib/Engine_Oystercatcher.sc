@@ -131,12 +131,12 @@ Engine_Oystercatcher : CroneEngine {
 
 			// Oscs variable tri to saw
 			oscWaveShape = (oscWaveShape + (envelope * oscWaveShapeModEnv) + (lfo.linlin(-1, 1, 0, 1) * oscWaveShapeModLfo)).clip;
-			varSawWaveShape = oscWaveShape.linlin(0, 1, 0.51, 0.99);
+			varSawWaveShape = oscWaveShape.linlin(0, 1, 0.5, 0.99);
 			signal = (
-				VarSaw.ar(freq0, 0, varSawWaveShape, oscMod0.linlin(0, 1, 0.4, 1))
-				+ VarSaw.ar(freq1, 0, varSawWaveShape, oscMod1.linlin(0, 1, 0.4, 1))
-				+ VarSaw.ar(freq2, 0, varSawWaveShape, oscMod2.linlin(0, 1, 0.4, 1))
-				+ VarSaw.ar(freq3, 0, varSawWaveShape, oscMod3.linlin(0, 1, 0.4, 1))
+				VarSaw.ar(freq0, 0, varSawWaveShape, oscMod0)
+				+ VarSaw.ar(freq1, 0, varSawWaveShape, oscMod1)
+				+ VarSaw.ar(freq2, 0, varSawWaveShape, oscMod2)
+				+ VarSaw.ar(freq3, 0, varSawWaveShape, oscMod3)
 			) * oscWaveShape.linlin(0, 1, 0.25, 0.1) * oscLevel;
 
 			// Noise

@@ -143,7 +143,7 @@ local function play_chord()
       else
         chord_notes[i] = chord_notes[i - 1] + interval
       end
-      osc_mods[i] = clusters[i].num_points_norm
+      osc_mods[i] = math.sqrt(clusters[i].num_points_norm)
 
       prev_x, prev_y = current_x, current_y
     end
@@ -158,11 +158,11 @@ local function play_chord()
     end
 
     -- TODO remove
-    -- print("--- chordOn", Sequencer.slice_index)
-    -- for i = 1, #chord_notes do
-    --   print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-    -- end
-    -- print("---")
+    print("--- chordOn", Sequencer.slice_index)
+    for i = 1, #chord_notes do
+      print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
+    end
+    print("---")
 
     local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
@@ -177,11 +177,12 @@ end
 
 local function generate_perc_notes()
 
-  if Sequencer.num_active_triggers < 12 then
-    perc_steps_this_slice = 12
-  else
+  -- TODO decide if want this logic or not
+  -- if Sequencer.num_active_triggers < 12 then
+  --   perc_steps_this_slice = 12
+  -- else
     perc_steps_this_slice = 24
-  end
+  -- end
 
   -- TODO remove?
   -- if Sequencer.num_active_triggers < 8 then
@@ -202,11 +203,16 @@ local function generate_perc_notes()
     end
   end
 
-  -- TODO remove?
-  -- Insert rests randomly
-  -- while #perc_notes_this_slice < perc_steps_this_slice do
-  --   table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
-  -- end
+  -- Fill out the rest of the table with rest and repeated notes
+  while #perc_notes_this_slice < perc_steps_this_slice do
+    if math.random() > 0.2 then
+      -- Insert a rest
+      table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
+    else
+      -- Repeat an existing random note
+      table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), perc_notes_this_slice[ math.random(#perc_notes_this_slice)])
+    end
+  end
 
   -- Insert rests at end of slice
   -- while #perc_notes_this_slice < perc_steps_this_slice do
@@ -231,7 +237,20 @@ local function play_perc(index)
     local note_range = {chord_notes[1], chord_notes[1] + 38}
     local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
+
+    -- TODO consider this logic more
+    -- If this is the first step then snap discordant notes to chord root, maintaining octave
+    if index == 1 then
+      local distance_from_chord_root = (chord_notes[1] % 12) - (note_num % 12)
+      if math.abs(distance_from_chord_root) < 3 and math.abs(distance_from_chord_root) > 0 then
+        -- print(" Snap!", MusicUtil.note_num_to_name(note_num, true), MusicUtil.note_num_to_name(note_num + distance_from_chord_root, true))
+        note_num = note_num + distance_from_chord_root
+      end
+    end
+
     local sub_note_num = note_num - 5
+
+    print("Perc note num", MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
@@ -247,8 +266,8 @@ local function play_perc(index)
     -- Density to LFO freq
     params:set("perc_lfo_freq", util.linexp(0, 1, dyn_params.perc_lfo_freq_low, dyn_params.perc_lfo_freq_high, Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "density_norm")))
 
-    -- Num triggers to env_release, delay_send and lp_filter_cutoff
-    local num_triggers_norm = Sequencer.num_active_triggers / (TRIG_COLS * TRIG_ROWS)
+    -- Num triggers (and some random) to env_release, delay_send
+    local num_triggers_norm = (Sequencer.num_active_triggers / (TRIG_COLS * TRIG_ROWS) + math.random()) * 0.5
     params:set("perc_env_release", util.linlin(0, 1, dyn_params.perc_env_release_low, dyn_params.perc_env_release_high, num_triggers_norm))
     params:set("perc_delay_send", util.linlin(0, 1, dyn_params.perc_delay_send_high, dyn_params.perc_delay_send_low, num_triggers_norm))
 
