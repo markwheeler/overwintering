@@ -1,7 +1,6 @@
 local Sequencer = {}
 
 local MusicUtil = require "musicutil"
-local SonicDefs = include("lib/sonic_defs")
 
 Sequencer.STEPS_PER_SLICE = 96
 
@@ -25,6 +24,38 @@ local TRIG_COLS = 6
 local TRIG_ROWS = 3
 local TRIG_DISPLAY_TIME = 28 -- In steps
 local trigger_positions = {}
+
+
+-- Sonic def loading
+
+local function script_path()
+  local str = debug.getinfo(2, "S").source:sub(2)
+  return str:match("(.*/)")
+end
+
+local function file_exists(name)
+  local f = io.open(name, "r")
+  if f ~= nil then
+    io.close(f)
+    return true
+  else
+    return false
+  end
+end
+
+local function get_sonic_def(species_id)
+  local def
+  local path_prefix = script_path() .. "sonic_def_"
+  local path = path_prefix .. species_id .. ".lua"
+  if file_exists(path) then
+    def = dofile(path)
+    print("Loaded sonic def for species " .. species_id)
+  else
+    def = dofile(path_prefix .. "default.lua")
+    print("No sonic def found for species " .. species_id .. " (using default)")
+  end
+  return def
+end
 
 
 -- Triggers
@@ -250,7 +281,7 @@ local function play_perc(index)
 
     local sub_note_num = note_num - 5
 
-    print("Perc note num", MusicUtil.note_num_to_name(note_num, true))
+    print("Perc", math.floor(note_num), MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
@@ -401,11 +432,8 @@ function Sequencer.bird_changed(index)
 
   -- Store info
   bird_index = index
-  sonic_def = SonicDefs[tostring(Trove.get_bird(bird_index).species_id)]
-  if not sonic_def then
-    sonic_def = SonicDefs.default
-    print("No sonic def found. Using default.")
-  end
+  local species_id = tostring(Trove.get_bird(bird_index).species_id)
+  sonic_def = get_sonic_def(species_id)
   num_slices = Trove.get_bird(bird_index).num_slices
 
   -- Set state
