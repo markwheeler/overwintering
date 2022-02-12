@@ -23,8 +23,8 @@ SonicDef = {
       -- Chord
       chord_osc_wave_shape_low = 1,
       chord_osc_wave_shape_high = 0,
-      chord_noise_level_low = 0.5,
-      chord_noise_level_high = 0.02,
+      chord_noise_level_low = 0.52,
+      chord_noise_level_high = 0.015,
       chord_lp_filter_cutoff_low = 90,
       chord_lp_filter_cutoff_high = 150,
       chord_amp_mod_lfo_low = 0.2,
@@ -49,8 +49,8 @@ SonicDef = {
       perc_env_release_high = 1,
       perc_panning_low = -0.9,
       perc_panning_high = 0.9,
-      perc_lp_filter_cutoff_low = 30,
-      perc_lp_filter_cutoff_high = 85,
+      perc_lp_filter_cutoff_low = 33,
+      perc_lp_filter_cutoff_high = 90,
       perc_lp_filter_resonance_low = 0.4,
       perc_lp_filter_resonance_high = 0,
       perc_lfo_freq_low = 0.05,
@@ -60,7 +60,7 @@ SonicDef = {
   
       -- FX
       fx_delay_feedback_low = 0.2,
-      fx_delay_feedback_high = 1
+      fx_delay_feedback_high = 0.85
     },
   
     -- Params
@@ -72,7 +72,7 @@ SonicDef = {
       chord_freq_mod_lfo = 0,
       chord_osc_wave_shape_mod_env = 0,
       chord_osc_wave_shape_mod_lfo = 0,
-      chord_osc_level = 0.4,
+      chord_osc_level = 0.45,
       
       chord_lp_filter_cutoff_mod_env = -0.1,
       chord_lp_filter_cutoff_mod_lfo = 0.1,
@@ -86,7 +86,7 @@ SonicDef = {
       chord_ring_mod_mix_lfo = 0.05,
       chord_ring_mod_freq = 293,
   
-      chord_chorus_send = 0.3,
+      chord_chorus_send = 0.35,
       chord_delay_send = 0.6,
   
       -- Perc
@@ -104,7 +104,7 @@ SonicDef = {
   
       perc_env_attack = 0.01,
       perc_amp = 1,
-      perc_amp_mod_lfo = 0.75,
+      perc_amp_mod_lfo = 0.5,
   
       perc_chorus_send = 0,
   
