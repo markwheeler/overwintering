@@ -14,7 +14,6 @@ SonicDef = {
     perc_start_y = 0.25,
   
     -- When to expand vs contract trigger order
-    -- TODO does this need to vary for each year?
     contract_range = {5, 24},
   
     -- Dynamic params
@@ -45,14 +44,14 @@ SonicDef = {
       perc_sub_osc_level_high = 0.22,
       perc_crackle_level_low = 0.11,
       perc_crackle_level_high = 0,
-      perc_env_release_low = 3,
-      perc_env_release_high = 0.5,
+      perc_env_release_low = 2,
+      perc_env_release_high = 0.4,
       perc_panning_low = -0.85,
       perc_panning_high = 0.85,
       perc_lp_filter_cutoff_low = 600,
       perc_lp_filter_cutoff_high = 5000,
-      perc_lp_filter_resonance_low = 0.1,
-      perc_lp_filter_resonance_high = 0.4,
+      perc_lp_filter_resonance_low = 0.05,
+      perc_lp_filter_resonance_high = 0.25,
       perc_lfo_freq_low = 0.3,
       perc_lfo_freq_high = 800,
       perc_delay_send_low = 0.7,

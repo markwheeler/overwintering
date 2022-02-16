@@ -108,7 +108,8 @@ local function update_triggers()
   -- Sort to expand/contract
   local week = Trove.get_slice(bird_index, Sequencer.slice_index).week
   table.sort(Sequencer.triggers, function(a, b)
-    if week >= sonic_def.contract_range[1] and week <= sonic_def.contract_range[2] then
+    if (sonic_def.contract_range[1] < sonic_def.contract_range[2] and week >= sonic_def.contract_range[1] and week <= sonic_def.contract_range[2])
+    or (sonic_def.contract_range[1] > sonic_def.contract_range[2] and week >= sonic_def.contract_range[1] or week <= sonic_def.contract_range[2]) then
       return a.distance_from_root > b.distance_from_root
     else
       return a.distance_from_root < b.distance_from_root
@@ -146,7 +147,10 @@ local function play_chord()
 
   chord_notes = {}
   local osc_mods = {}
-  for i = 1, Trove.MAX_NUM_CLUSTERS do osc_mods[i] = 0 end
+  for i = 1, Trove.MAX_NUM_CLUSTERS do
+    chord_notes[i] = sonic_def.musical_scale[1]
+    osc_mods[i] = 0
+  end
 
   local clusters = Trove.get_slice(bird_index, Sequencer.slice_index).clusters
   local current_x, current_y
@@ -188,21 +192,25 @@ local function play_chord()
       end
     end
 
-    -- TODO remove
-    print("--- chordOn", Sequencer.slice_index)
-    for i = 1, #chord_notes do
-      print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-    end
-    print("---")
-
-    local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
-
-    engine.chordOn(
-      Sequencer.slice_index, -- voiceId
-      note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
-      osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
-    )
   end
+
+  -- Min value for first note in chord to avoid silence
+  osc_mods[1] = math.max(osc_mods[1], 0.1)
+
+  -- TODO remove
+  print("--- chordOn", Sequencer.slice_index)
+  for i = 1, #chord_notes do
+    print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
+  end
+  print("---")
+
+  local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
+
+  engine.chordOn(
+    Sequencer.slice_index, -- voiceId
+    note_freqs[1], note_freqs[2], note_freqs[3], note_freqs[4], -- freqs
+    osc_mods[1], osc_mods[2], osc_mods[3], osc_mods[4] -- oscMods
+  )
 
 end
 
@@ -236,12 +244,12 @@ local function generate_perc_notes()
 
   -- Fill out the rest of the table with rest and repeated notes
   while #perc_notes_this_slice < perc_steps_this_slice do
-    if math.random() > 0.2 then
+    if math.random() > 0.2 or #perc_notes_this_slice == 0 then
       -- Insert a rest
-      table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), 0)
+      table.insert(perc_notes_this_slice, math.random(math.max(#perc_notes_this_slice, 1)), 0)
     else
       -- Repeat an existing random note
-      table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), perc_notes_this_slice[ math.random(#perc_notes_this_slice)])
+      table.insert(perc_notes_this_slice, math.random(#perc_notes_this_slice), perc_notes_this_slice[math.random(#perc_notes_this_slice)])
     end
   end
 
