@@ -385,6 +385,12 @@ local function cleanup_bird(bird)
     s.max_x = nil
     s.min_y = nil
     s.max_y = nil
+
+    -- NOTE: Could bring these back but currently unused by Sequencer
+    s.min_x_norm = nil
+    s.max_x_norm = nil
+    s.max_y_norm = nil
+
     for _, c in ipairs(s.clusters) do
       c.num_points = nil
     end

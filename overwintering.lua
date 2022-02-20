@@ -53,7 +53,7 @@ local function screen_dirty_callback()
 end
 
 local function slice_changed_callback()
-  -- Cycle
+  -- Cycle views
   if params:get("cycle_views") > 0 then
     view_countdown = view_countdown - 1
     if view_countdown <= 0 then
@@ -143,6 +143,14 @@ function init()
 
   params:add {
     type = "binary",
+    id = "cycle_species",
+    name = "Cycle Species",
+    behavior = "toggle",
+    default = 0 --TODO default on
+  }
+
+  params:add {
+    type = "binary",
     id = "play",
     name = "Play",
     behavior = "toggle",
@@ -169,7 +177,7 @@ function init()
   Sequencer.startup()
   metro.init(screen_update, 1 / SCREEN_FRAMERATE):start()
   update_metro:start()
-
+  
 end
 
 

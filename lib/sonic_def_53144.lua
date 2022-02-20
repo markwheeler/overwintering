@@ -5,7 +5,7 @@ local MusicUtil = require "musicutil"
 SonicDef = {
 
     -- Key
-    musical_scale = MusicUtil.generate_scale(40, "Major", 8), -- E
+    musical_scale = MusicUtil.generate_scale(45, "Major", 8), -- A
   
     -- Defines where the roots are measured from
     chord_start_x = 0.55, -- 0 is left, 1 is right
@@ -22,7 +22,7 @@ SonicDef = {
       -- Chord
       chord_osc_wave_shape_low = 1,
       chord_osc_wave_shape_high = 0,
-      chord_noise_level_low = 0.52,
+      chord_noise_level_low = 0.35,
       chord_noise_level_high = 0.015,
       chord_lp_filter_cutoff_low = 90,
       chord_lp_filter_cutoff_high = 150,
@@ -35,7 +35,7 @@ SonicDef = {
       chord_env_release_low = 4,
       chord_env_release_high = 6,
       chord_amp_low = 0.9,
-      chord_amp_high = 1.8,
+      chord_amp_high = 2,
   
       -- Perc
       perc_osc_level_low = 0.15,
@@ -43,14 +43,14 @@ SonicDef = {
       perc_sub_osc_level_low = 0.5,
       perc_sub_osc_level_high = 0,
       perc_crackle_level_low = 0,
-      perc_crackle_level_high = 0.3,
-      perc_env_release_low = 4,
-      perc_env_release_high = 1,
+      perc_crackle_level_high = 0.2,
+      perc_env_release_low = 3,
+      perc_env_release_high = 0.8,
       perc_panning_low = -0.9,
       perc_panning_high = 0.9,
-      perc_lp_filter_cutoff_low = 33,
-      perc_lp_filter_cutoff_high = 90,
-      perc_lp_filter_resonance_low = 0.4,
+      perc_lp_filter_cutoff_low = 60,
+      perc_lp_filter_cutoff_high = 160,
+      perc_lp_filter_resonance_low = 0.35,
       perc_lp_filter_resonance_high = 0,
       perc_lfo_freq_low = 0.05,
       perc_lfo_freq_high = 100,
@@ -59,7 +59,7 @@ SonicDef = {
   
       -- FX
       fx_delay_feedback_low = 0.2,
-      fx_delay_feedback_high = 0.85
+      fx_delay_feedback_high = 0.75
     },
   
     -- Params
@@ -71,7 +71,7 @@ SonicDef = {
       chord_freq_mod_lfo = 0,
       chord_osc_wave_shape_mod_env = 0,
       chord_osc_wave_shape_mod_lfo = 0,
-      chord_osc_level = 0.45,
+      chord_osc_level = 0.5,
       
       chord_lp_filter_cutoff_mod_env = -0.1,
       chord_lp_filter_cutoff_mod_lfo = 0.1,
@@ -98,12 +98,12 @@ SonicDef = {
       perc_osc_wave_shape_mod_lfo = 0,
       perc_noise_level = 0,
   
-      perc_lp_filter_cutoff_mod_env = 0.2,
+      perc_lp_filter_cutoff_mod_env = 0.05,
       perc_lp_filter_cutoff_mod_lfo = 0,
   
       perc_env_attack = 0.01,
       perc_amp = 1,
-      perc_amp_mod_lfo = 0.5,
+      perc_amp_mod_lfo = 0.3,
   
       perc_chorus_send = 0,
   

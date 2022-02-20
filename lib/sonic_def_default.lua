@@ -60,7 +60,7 @@ SonicDef = {
   
       -- FX
       fx_delay_feedback_low = 0.2,
-      fx_delay_feedback_high = 1
+      fx_delay_feedback_high = 0.95
     },
   
     -- Params

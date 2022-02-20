@@ -168,7 +168,7 @@ local function play_chord()
       local interval = math.floor(util.linlin(0, 1, 0, 38, distance))
 
       -- TODO is this the right value?
-      if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
+      -- if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
       interval = math.min(interval, 22)
 
       if i == 1 then
@@ -198,11 +198,11 @@ local function play_chord()
   osc_mods[1] = math.max(osc_mods[1], 0.1)
 
   -- TODO remove
-  print("--- chordOn", Sequencer.slice_index)
-  for i = 1, #chord_notes do
-    print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-  end
-  print("---")
+  -- print("--- chordOn", Sequencer.slice_index)
+  -- for i = 1, #chord_notes do
+  --   print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
+  -- end
+  -- print("---")
 
   local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
@@ -289,7 +289,8 @@ local function play_perc(index)
 
     local sub_note_num = note_num - 5
 
-    print("Perc", math.floor(note_num), MusicUtil.note_num_to_name(note_num, true))
+    -- TODO
+    -- print("Perc", math.floor(note_num), MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_def.dynamic_params
@@ -470,7 +471,17 @@ function Sequencer.update()
 
       Sequencer.step_index = 1
       Sequencer.slice_index = Sequencer.slice_index + 1
-      if Sequencer.slice_index > num_slices then Sequencer.slice_index = 1 end
+
+      -- At end of data
+      if Sequencer.slice_index > num_slices then
+        if params:get("cycle_species") > 0 then
+          local new_species_id = params:get("species") + 1
+          if new_species_id > params:get_range("species")[2] then new_species_id = 1 end
+          params:set("species", new_species_id)
+        else
+          Sequencer.slice_index = 1
+        end
+      end
 
       slice_changed()
     end
