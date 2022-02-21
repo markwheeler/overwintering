@@ -12,7 +12,7 @@ Sequencer.triggers = {}
 Sequencer.num_active_triggers = 0
 
 local Trove = {}
-local sonic_def = {}
+local sonic_defs = {}
 local bird_index = 1
 local num_slices = 0
 local chord_notes = {}
@@ -43,7 +43,7 @@ local function file_exists(name)
   end
 end
 
-local function get_sonic_def(species_id)
+local function load_sonic_def(species_id)
   local def
   local path_prefix = script_path() .. "sonic_def_"
   local path = path_prefix .. species_id .. ".lua"
@@ -55,6 +55,14 @@ local function get_sonic_def(species_id)
     print("No sonic def found for species " .. species_id .. " (using default)")
   end
   return def
+end
+
+local function load_sonic_defs(species_ids)
+  sonic_defs = {}
+  for _, v in ipairs(species_ids) do
+    local species_id = tostring(v)
+    table.insert(sonic_defs, load_sonic_def(species_id))
+  end
 end
 
 
@@ -86,7 +94,7 @@ local function generate_triggers(bird_index)
       trig.mod_b = util.linlin(1, TRIG_COLS * TRIG_ROWS, 1, 0, (c - 1 ) * TRIG_ROWS + r)
 
       -- Calculate distance from perc_start
-      local x_diff, y_diff = math.abs(trig.x - sonic_def.perc_start_x), math.abs((1 - trig.y) * 0.5 - sonic_def.perc_start_y)
+      local x_diff, y_diff = math.abs(trig.x - sonic_defs[bird_index].perc_start_x), math.abs((1 - trig.y) * 0.5 - sonic_defs[bird_index].perc_start_y)
       trig.distance_from_root = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
       if trig.distance_from_root < min_distance then min_distance = trig.distance_from_root end
       if trig.distance_from_root > max_distance then max_distance = trig.distance_from_root end
@@ -108,8 +116,8 @@ local function update_triggers()
   -- Sort to expand/contract
   local week = Trove.get_slice(bird_index, Sequencer.slice_index).week
   table.sort(Sequencer.triggers, function(a, b)
-    if (sonic_def.contract_range[1] < sonic_def.contract_range[2] and week >= sonic_def.contract_range[1] and week <= sonic_def.contract_range[2])
-    or (sonic_def.contract_range[1] > sonic_def.contract_range[2] and week >= sonic_def.contract_range[1] or week <= sonic_def.contract_range[2]) then
+    if (sonic_defs[bird_index].contract_range[1] < sonic_defs[bird_index].contract_range[2] and week >= sonic_defs[bird_index].contract_range[1] and week <= sonic_defs[bird_index].contract_range[2])
+    or (sonic_defs[bird_index].contract_range[1] > sonic_defs[bird_index].contract_range[2] and week >= sonic_defs[bird_index].contract_range[1] or week <= sonic_defs[bird_index].contract_range[2]) then
       return a.distance_from_root > b.distance_from_root
     else
       return a.distance_from_root < b.distance_from_root
@@ -148,14 +156,14 @@ local function play_chord()
   chord_notes = {}
   local osc_mods = {}
   for i = 1, Trove.MAX_NUM_CLUSTERS do
-    chord_notes[i] = sonic_def.musical_scale[1]
+    chord_notes[i] = sonic_defs[bird_index].musical_scale[1]
     osc_mods[i] = 0
   end
 
   local clusters = Trove.get_slice(bird_index, Sequencer.slice_index).clusters
   local current_x, current_y
-  local prev_x = sonic_def.chord_start_x
-  local prev_y = sonic_def.chord_start_y
+  local prev_x = sonic_defs[bird_index].chord_start_x
+  local prev_y = sonic_defs[bird_index].chord_start_y
 
   local num_clusters = #clusters
   if num_clusters > 0 then
@@ -173,7 +181,7 @@ local function play_chord()
 
       if i == 1 then
         for n = 1, Trove.MAX_NUM_CLUSTERS do
-          chord_notes[n] = sonic_def.musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
+          chord_notes[n] = sonic_defs[bird_index].musical_scale[1] + interval -- Default all notes to first note of chord (leftover voices will therefore unison on root)
         end
       else
         chord_notes[i] = chord_notes[i - 1] + interval
@@ -183,7 +191,7 @@ local function play_chord()
       prev_x, prev_y = current_x, current_y
     end
     
-    chord_notes = MusicUtil.snap_notes_to_array(chord_notes, sonic_def.musical_scale)
+    chord_notes = MusicUtil.snap_notes_to_array(chord_notes, sonic_defs[bird_index].musical_scale)
 
     -- Iterate the scale and remove any intervals of < 3 ST
     for i = 2, #chord_notes do
@@ -275,7 +283,7 @@ local function play_perc(index)
     -- Trigger distance from perc_start to note
     local note_range = {chord_notes[1], chord_notes[1] + 38}
     local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
-    note_num = MusicUtil.snap_note_to_array(note_num, sonic_def.musical_scale)
+    note_num = MusicUtil.snap_note_to_array(note_num, sonic_defs[bird_index].musical_scale)
 
     -- TODO consider this logic more
     -- If this is the first step then snap discordant notes to chord root, maintaining octave
@@ -293,7 +301,7 @@ local function play_perc(index)
     -- print("Perc", math.floor(note_num), MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
-    local dyn_params = sonic_def.dynamic_params
+    local dyn_params = sonic_defs[bird_index].dynamic_params
 
     -- Trigger mod_a to osc level, crackle level and filter resonance
     params:set("perc_osc_level", util.linlin(0, 1, dyn_params.perc_osc_level_high, dyn_params.perc_osc_level_low, trigger.mod_a))
@@ -365,7 +373,7 @@ local function step_changed()
   -- Update chord and FX params
 
   local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
-  local dyn_params = sonic_def.dynamic_params
+  local dyn_params = sonic_defs[bird_index].dynamic_params
 
   -- Area to wave shape and amp mod LFO
   local area = Trove.interp_slice_value(bird_index, Sequencer.slice_index, Sequencer.slice_index + 1, slice_progress, "area_norm")
@@ -441,8 +449,6 @@ function Sequencer.bird_changed(index)
 
   -- Store info
   bird_index = index
-  local species_id = tostring(Trove.get_bird(bird_index).species_id)
-  sonic_def = get_sonic_def(species_id)
   num_slices = Trove.get_bird(bird_index).num_slices
 
   -- Set state
@@ -453,7 +459,7 @@ function Sequencer.bird_changed(index)
   generate_triggers(bird_index)
 
   -- Set engine params
-  for k, v in pairs(sonic_def.params) do
+  for k, v in pairs(sonic_defs[bird_index].params) do
     params:set(k, v)
   end
 
@@ -494,6 +500,14 @@ end
 
 function Sequencer.init(trove)
   Trove = trove
+
+  -- Load sonic defs
+  local species_ids = {}
+  for _, v in ipairs(Trove.bird_data) do
+    table.insert(species_ids, v.species_id)
+  end
+  load_sonic_defs(species_ids)
+
 end
 
 function Sequencer.startup()
