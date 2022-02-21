@@ -423,10 +423,9 @@ local function step_changed()
     util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, lower_bound)
   )
 
- -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
+  -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
 
   -- Play perc (passes index of perc step)
-
   if Sequencer.num_active_triggers > 0 and (Sequencer.step_index - 1) % (Sequencer.STEPS_PER_SLICE / perc_steps_this_slice) == 0 then
     local perc_index = math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1)
     perc_index = util.wrap(perc_index, 1, #perc_notes_this_slice) -- Required when not filling out the slices with rests
@@ -471,7 +470,6 @@ function Sequencer.update()
   if params:get("play") == 1 then
 
     Sequencer.step_index = Sequencer.step_index + 1
-    step_changed()
 
     if Sequencer.step_index > Sequencer.STEPS_PER_SLICE then
 
@@ -489,7 +487,11 @@ function Sequencer.update()
         end
       end
 
+      step_changed()
       slice_changed()
+
+    else
+      step_changed()
     end
   end
 
