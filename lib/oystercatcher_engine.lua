@@ -46,6 +46,8 @@ specs.DELAY_MOD_FREQ = ControlSpec.new(0, 2, "lin", 0, 0.2, "Hz")
 specs.DELAY_MOD_DEPTH = ControlSpec.UNIPOLAR
 specs.DELAY_FEEDBACK = ControlSpec.new(0, 1, 'lin', 0, 0.7)
 
+specs.MIXER_AMP = ControlSpec.UNIPOLAR
+
 Oystercatcher.specs = specs
 
 
@@ -125,12 +127,14 @@ end
 
 function Oystercatcher.add_fx_params()
   
-  params:add_separator("FX")
+  params:add_separator("FX and Mixer")
 
   params:add{type = "control", id = "fx_delay_time", name = "Delay Time", controlspec = specs.DELAY_TIME, action = engine.delayTime}
   params:add{type = "control", id = "fx_delay_mod_freq", name = "Delay Mod Freq", controlspec = specs.DELAY_MOD_FREQ, action = engine.delayModFreq}
   params:add{type = "control", id = "fx_delay_mod_depth", name = "Delay Mod Depth", controlspec = specs.DELAY_MOD_DEPTH, action = engine.delayModDepth}
   params:add{type = "control", id = "fx_delay_feedback", name = "Delay Feedback", controlspec = specs.DELAY_FEEDBACK, action = engine.delayFeedback}
+
+  params:add{type = "control", id = "mixer_amp", name = "Mixer Amp", controlspec = specs.MIXER_AMP, action = engine.mixerAmp}
   
 end
 

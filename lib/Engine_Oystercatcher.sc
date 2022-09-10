@@ -314,7 +314,7 @@ Engine_Oystercatcher : CroneEngine {
 
 		// Mixer
 		mixer = SynthDef(\mixer, {
-			arg in, out;
+			arg in, out, amp = 1;
 			var signal;
 
 			signal = In.ar(in, 2);
@@ -325,6 +325,10 @@ Engine_Oystercatcher : CroneEngine {
 			// Compression and clipping
 			signal = CompanderD.ar(in: signal, thresh: 0.4, slopeBelow: 1, slopeAbove: 0.25, clampTime: 0.002, relaxTime: 0.01);
 			signal = tanh(signal).softclip;
+
+			// Mixer amp
+			amp = Lag.kr(amp, 0.1);
+			signal = signal * amp;
 
 			Out.ar(out, signal);
 
@@ -666,6 +670,14 @@ Engine_Oystercatcher : CroneEngine {
 		this.addCommand(\delayFeedback, "f", {
 			arg msg;
 			delay.set(\feedback, msg[1].clip(0, 1));
+		});
+
+
+		// Mixer
+
+		this.addCommand(\mixerAmp, "f", {
+			arg msg;
+			mixer.set(\amp, msg[1].clip(0, 1));
 		});
 
 	}

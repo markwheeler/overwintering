@@ -25,6 +25,8 @@ local TRIG_ROWS = 3
 local TRIG_DISPLAY_TIME = 28 -- In steps
 local trigger_positions = {}
 
+local fade_out = false
+
 
 -- Sonic def loading
 
@@ -441,6 +443,14 @@ local function slice_changed()
   Sequencer.slice_changed_callback()
 end
 
+local function fade_out_complete(bird_index)
+  -- Set engine params
+  for k, v in pairs(sonic_defs[bird_index].params) do
+    params:set(k, v)
+  end
+  fade_out = false
+end
+
 
 -- Public functions
 
@@ -457,11 +467,10 @@ function Sequencer.bird_changed(index)
   -- Triggers
   generate_triggers(bird_index)
 
-  -- Set engine params
-  for k, v in pairs(sonic_defs[bird_index].params) do
-    params:set(k, v)
-  end
-
+  -- Start fade out
+  params:set("mixer_amp", 0)
+  fade_out = true
+  
 end
 
 function Sequencer.update()
@@ -493,6 +502,15 @@ function Sequencer.update()
     else
       step_changed()
     end
+
+    -- Fade out/in
+    if fade_out then
+      fade_out_complete(params:get("species"))
+    end
+    if params:get("mixer_amp") < 1 then
+      params:delta("mixer_amp", 4)
+    end
+
   end
 
   update_trig_display()
