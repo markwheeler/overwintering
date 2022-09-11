@@ -1,3 +1,6 @@
 [
-    {"species_id": 52744, "latin": "Ciconia Ciconia", "english": "White Stork"}
+    {"species_id": 53560, "latin": "Grus Grus", "english": "Common Crane"},
+    {"species_id": 54149, "latin": "Streptopelia Turtur", "english": "European Turtle-Dove"},
+    {"species_id": 52744, "latin": "Ciconia Ciconia", "english": "White Stork"},
+    {"species_id": 53943, "latin": "Calidris Pugnax", "english": "Ruff"}
 ]

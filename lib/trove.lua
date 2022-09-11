@@ -61,12 +61,16 @@ end
 
 function Trove.load_birds(data_folder)
 
+  local start_time = os.time()
+
   local species_list = load_species_list(data_folder .. "species_list.json")
   for _, v in ipairs(species_list) do
     local file_path = data_folder .. v.species_id .. ".json"
     local bird = load_bird(file_path)
     if bird then table.insert(Trove.bird_data, bird) end
   end
+
+  print("Loaded all species data in " .. os.difftime(os.time(), start_time) .. " seconds")
 
 end
 

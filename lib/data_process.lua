@@ -11,7 +11,10 @@ local Json = require "json"
 local Clustering = require "clustering"
 
 local MAX_NUM_CLUSTERS = 4
-local ROUND_QUANT = 0.001 -- This just helps keep the output file size down
+local ROUND_QUANT = 0.001 -- Helps keep the output file size down
+
+local MIN_YEAR = 2019
+local MAX_YEAR = 2021
 
 local function round(number, quant)
   if quant == 0 then
@@ -161,7 +164,11 @@ local function create_slice(week, year)
 end
 
 
-local function create_bird(bird_data, species)
+local function create_bird(bird_data, species, min_year, max_year)
+
+  min_year = min_year or 0
+  max_year = max_year or math.huge
+
   -- Sort
   table_sort_by_values(bird_data, "year", "week", "y", "x")
 
@@ -177,33 +184,40 @@ local function create_bird(bird_data, species)
   local slice
 
   for _, v in ipairs(bird_data) do
-    -- Add a new slice if need be
-    if bird.num_slices == 0 or v.week ~= bird.slices[bird.num_slices].week or v.year ~= bird.slices[bird.num_slices].year then
 
-      -- Check if we need to fill in a gap with empty slices
-      if bird.num_slices > 0 then
-        local expected_week, expected_year = increment_week(bird.slices[bird.num_slices].week, bird.slices[bird.num_slices].year)
+    -- Crop by year
+    if v.year >= min_year and v.year <= max_year then
 
-        while expected_week ~= v.week do  
-          slice = create_slice(expected_week, expected_year)
-          table.insert(bird.slices, slice)
-          bird.num_slices = bird.num_slices + 1
-          expected_week, expected_year = increment_week(expected_week, expected_year)
+      -- Add a new slice if need be
+      if bird.num_slices == 0 or v.week ~= bird.slices[bird.num_slices].week or v.year ~= bird.slices[bird.num_slices].year then
+
+        -- Check if we need to fill in a gap with empty slices
+        if bird.num_slices > 0 then
+          local expected_week, expected_year = increment_week(bird.slices[bird.num_slices].week, bird.slices[bird.num_slices].year)
+
+          while expected_week ~= v.week do
+            slice = create_slice(expected_week, expected_year)
+            table.insert(bird.slices, slice)
+            bird.num_slices = bird.num_slices + 1
+            expected_week, expected_year = increment_week(expected_week, expected_year)
+          end
         end
+
+        slice = create_slice(v.week, v.year)
+        table.insert(bird.slices, slice)
+        bird.num_slices = bird.num_slices + 1
+
       end
 
-      slice = create_slice(v.week, v.year)
-      table.insert(bird.slices, slice)
-      bird.num_slices = bird.num_slices + 1
-    end
+      -- Add point
+      local point = {
+        x = v.x,
+        y = v.y
+      }
+      table.insert(bird.slices[bird.num_slices].points, point)
+      slice.num_points = slice.num_points + 1
 
-    -- Add point
-    local point = {
-      x = v.x,
-      y = v.y
-    }
-    table.insert(bird.slices[bird.num_slices].points, point)
-    slice.num_points = slice.num_points + 1
+    end
   end
 
   print("Created " .. bird.num_slices .. " slices for " .. bird.species_id)
@@ -435,7 +449,7 @@ local function init()
       end
     end
     if species then
-      local bird = create_bird(v, species)
+      local bird = create_bird(v, species, MIN_YEAR, MAX_YEAR)
       bird = process_bird(bird)
       bird = cleanup_bird(bird)
       write_bird_json(bird, output_folder)
