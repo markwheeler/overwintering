@@ -126,7 +126,6 @@ local function update_triggers()
     end
   end)
 
-  -- TODO Perf test
   -- Activate triggers
   Sequencer.num_active_triggers = 0
   for _, t in ipairs(Sequencer.triggers) do
@@ -177,8 +176,7 @@ local function play_chord()
       local distance = math.sqrt(math.pow(x_diff, 2) + math.pow(y_diff, 2))
       local interval = math.floor(util.linlin(0, 1, 0, 38, distance))
 
-      -- TODO is this the right value?
-      -- if interval > 16 then print("LARGE INTERVAL ALERT -------------------------------->", interval) end
+      -- NOTE: Could tweak this value
       interval = math.min(interval, 22)
 
       if i == 1 then
@@ -207,13 +205,6 @@ local function play_chord()
   -- Min value for first note in chord to avoid silence
   osc_mods[1] = math.max(osc_mods[1], 0.1)
 
-  -- TODO remove
-  -- print("--- chordOn", Sequencer.slice_index)
-  -- for i = 1, #chord_notes do
-  --   print(chord_notes[i], MusicUtil.note_num_to_name(chord_notes[i], true), util.round(osc_mods[i], 0.01))
-  -- end
-  -- print("---")
-
   local note_freqs = MusicUtil.note_nums_to_freqs(chord_notes)
 
   engine.chordOn(
@@ -226,23 +217,7 @@ end
 
 local function generate_perc_notes()
 
-  -- TODO decide if want this logic or not
-  -- if Sequencer.num_active_triggers < 12 then
-  --   perc_steps_this_slice = 12
-  -- else
-    perc_steps_this_slice = 24
-  -- end
-
-  -- TODO remove?
-  -- if Sequencer.num_active_triggers < 8 then
-  --   perc_steps_this_slice = 8
-  -- elseif Sequencer.num_active_triggers < 12 then
-  --   perc_steps_this_slice = 12
-  -- elseif Sequencer.num_active_triggers < 16 then
-  --   perc_steps_this_slice = 16
-  -- else
-  --   perc_steps_this_slice = 32
-  -- end
+  perc_steps_this_slice = 24
 
   -- Add the perc notes for this slice
   perc_notes_this_slice = {}
@@ -287,7 +262,6 @@ local function play_perc(index)
     local note_num = util.linlin(0, 1, note_range[1], note_range[2], trigger.distance_from_root)
     note_num = MusicUtil.snap_note_to_array(note_num, sonic_defs[bird_index].musical_scale)
 
-    -- TODO consider this logic more
     -- If this is the first step then snap discordant notes to chord root, maintaining octave
     if index == 1 then
       local distance_from_chord_root = (chord_notes[1] % 12) - (note_num % 12)
@@ -298,9 +272,6 @@ local function play_perc(index)
     end
 
     local sub_note_num = note_num - 5
-
-    -- TODO
-    -- print("Perc", math.floor(note_num), MusicUtil.note_num_to_name(note_num, true))
 
     local slice_progress = Sequencer.step_index / Sequencer.STEPS_PER_SLICE
     local dyn_params = sonic_defs[bird_index].dynamic_params
@@ -425,8 +396,6 @@ local function step_changed()
     util.linlin(0, 1, dyn_params.chord_lfo_freq_low, dyn_params.chord_lfo_freq_high, lower_bound)
   )
 
-  -- TODO could use num_points per cluster here if added support to the engine for individual osc shapes or ring mod per osc or something? Or even just amp per osc?
-
   -- Play perc (passes index of perc step)
   if Sequencer.num_active_triggers > 0 and (Sequencer.step_index - 1) % (Sequencer.STEPS_PER_SLICE / perc_steps_this_slice) == 0 then
     local perc_index = math.floor(((Sequencer.step_index - 1) / Sequencer.STEPS_PER_SLICE) * perc_steps_this_slice + 1)
@@ -473,6 +442,10 @@ function Sequencer.bird_changed(index)
   
 end
 
+function Sequencer.slice_delta(delta)
+  Sequencer.slice_index = util.clamp(Sequencer.slice_index + delta, 1, num_slices)
+end
+
 function Sequencer.update()
 
   -- Advance playback
@@ -491,6 +464,7 @@ function Sequencer.update()
           local new_species_id = params:get("species") + 1
           if new_species_id > params:get_range("species")[2] then new_species_id = 1 end
           params:set("species", new_species_id)
+          Sequencer.slice_index = 1
         else
           Sequencer.slice_index = 1
         end
@@ -510,6 +484,9 @@ function Sequencer.update()
     if params:get("mixer_amp") < 1 then
       params:delta("mixer_amp", 4)
     end
+
+  else
+    params:set("mixer_amp", 0)
 
   end
 

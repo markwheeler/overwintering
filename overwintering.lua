@@ -1,7 +1,20 @@
 -- Overwintering
--- 1.0.0 @markeats @giovannilami
+-- 1.0.0 @markeats
+-- llllllll.co/t/overwintering
 --
--- WIP
+-- Bird migration patterns.
+--
+-- E2 : Species
+-- E3 : Scrub time
+-- K2 : View
+-- K3 : Play / Pause
+--
+-- Sound and code Mark Eats.
+-- Concept Giovanni Lami &
+-- Elisabetta Reali.
+-- Data and consulting
+-- Gabriel Gargallo.
+-- EuroBirdPortal.org
 --
 
 local ControlSpec = require "controlspec"
@@ -67,17 +80,14 @@ end
 -- Encoder input
 function enc(n, delta)
 
-  if n == 1 then
+  if n == 2 then
     params:delta("species", delta)
 
-  elseif n == 2 then
-    if params:get("play") == 1 then
-      params:delta("time", delta * -1)
-    end
-
   elseif n == 3 then
-    
+    Sequencer.slice_delta(util.round(delta))
+
   end
+
   screen_dirty = true
 end
 
@@ -87,11 +97,11 @@ function key(n, z)
     if n == 1 then
 
     elseif n == 2 then
-      params:delta("play", 1)
-
-    elseif n == 3 then
       params:set("cycle_views", 0)
       view_mode = util.wrap(view_mode + 1, 1, NUM_VIEW_MODES)
+
+    elseif n == 3 then
+      params:delta("play", 1)
       
     end
     screen_dirty = true
@@ -146,7 +156,7 @@ function init()
     id = "cycle_species",
     name = "Cycle Species",
     behavior = "toggle",
-    default = 0 --TODO default on
+    default = 1
   }
 
   params:add {
@@ -166,6 +176,7 @@ function init()
       update_metro.time = value / Sequencer.STEPS_PER_SLICE
     end
   }
+  params:hide("time")
 
   -- Params
   Oystercatcher.add_chord_params()
@@ -198,10 +209,11 @@ function redraw()
     screen.level(15)
     screen.move(2, 7)
     screen.text(params:string("species"))
-    -- TODO add latin name?
     screen.level(3)
     screen.move(2, 16)
-    screen.text(slice.year .. " " .. slice.week)
+    screen.text(Trove.get_bird(params:get("species")).latin_name)
+    screen.move(126, 7)
+    screen.text_right(slice.year .. " " .. slice.week)
     screen.fill()
 
   -- Stats view

@@ -14,7 +14,7 @@ SonicDef = {
     perc_start_y = 0.2,
   
     -- When to expand vs contract trigger order
-    -- TODO does this need to vary for each year?
+    -- NOTE: Could vary this for each year
     contract_range = {12, 35},
   
     -- Dynamic params

@@ -423,8 +423,6 @@ local function init()
   local species_list_file_path = arg[2]
   local output_folder = arg[3]
 
-  -- TODO check file extensions of these
-
   local data = load_csv(input_file_path)
   local species_list = load_species_list(species_list_file_path)
   local split_data = split_by_species(data, species_list)

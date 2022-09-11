@@ -1,4 +1,4 @@
--- Ortolan Bunting
+-- Ortolan Bunting ---> Brambling
 
 local MusicUtil = require "musicutil"
 
@@ -8,13 +8,13 @@ SonicDef = {
     musical_scale = MusicUtil.generate_scale(43, "Major", 8), -- G
   
     -- Defines where the roots are measured from
-    chord_start_x = 0.28, -- 0 is left, 1 is right
-    chord_start_y = 0.25, -- 0 is top, 0.5 is bottom
-    perc_start_x = 0.28,
-    perc_start_y = 0.25,
+    chord_start_x = 0.4, -- 0 is left, 1 is right
+    chord_start_y = 0.1, -- 0 is top, 0.5 is bottom
+    perc_start_x = 0.4,
+    perc_start_y = 0.1,
   
     -- When to expand vs contract trigger order
-    contract_range = {36, 8},
+    contract_range = {37, 6},
   
     -- Dynamic params
     dynamic_params = {
@@ -102,7 +102,7 @@ SonicDef = {
       perc_lp_filter_cutoff_mod_lfo = 0.3,
   
       perc_env_attack = 0.005,
-      perc_amp = 0.3,
+      perc_amp = 0.2,
       perc_amp_mod_lfo = 0.5,
   
       perc_chorus_send = 0.4,

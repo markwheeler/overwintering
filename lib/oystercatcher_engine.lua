@@ -52,8 +52,8 @@ Oystercatcher.specs = specs
 
 
 function Oystercatcher.add_chord_params()
-  
-  params:add_separator("Chord Voice")
+
+  params:add_group("chord_voice", "Chord Voice", 26)
 
   params:add{type = "control", id = "chord_control_lag", name = "Control Lag", controlspec = specs.CONTROL_LAG, action = engine.controlLag}
 
@@ -88,12 +88,14 @@ function Oystercatcher.add_chord_params()
 
   params:add{type = "control", id = "chord_chorus_send", name = "Chorus Send", controlspec = specs.CHORUS_SEND, action = engine.chorusSend}
   params:add{type = "control", id = "chord_delay_send", name = "Delay Send", controlspec = specs.DELAY_SEND, action = engine.delaySend}
+
+  params:hide("chord_voice")
   
 end
 
 function Oystercatcher.add_perc_params()
   
-  params:add_separator("Perc Voice")
+  params:add_group("perc_voice", "Perc Voice", 22)
 
   params:add{type = "control", id = "perc_detune_variance", name = "Detune Variance", controlspec = specs.DETUNE_VARIANCE}
   params:add{type = "control", id = "perc_freq_mod_env", name = "Freq Mod: Env", controlspec = specs.FREQ_MOD_ENV}
@@ -122,12 +124,14 @@ function Oystercatcher.add_perc_params()
 
   params:add{type = "control", id = "perc_chorus_send", name = "Chorus Send", controlspec = specs.CHORUS_SEND}
   params:add{type = "control", id = "perc_delay_send", name = "Delay Send", controlspec = specs.DELAY_SEND}
+
+  params:hide("perc_voice")
   
 end
 
 function Oystercatcher.add_fx_params()
   
-  params:add_separator("FX and Mixer")
+  params:add_group("fx_and_mixer", "FX and Mixer", 5)
 
   params:add{type = "control", id = "fx_delay_time", name = "Delay Time", controlspec = specs.DELAY_TIME, action = engine.delayTime}
   params:add{type = "control", id = "fx_delay_mod_freq", name = "Delay Mod Freq", controlspec = specs.DELAY_MOD_FREQ, action = engine.delayModFreq}
@@ -135,6 +139,8 @@ function Oystercatcher.add_fx_params()
   params:add{type = "control", id = "fx_delay_feedback", name = "Delay Feedback", controlspec = specs.DELAY_FEEDBACK, action = engine.delayFeedback}
 
   params:add{type = "control", id = "mixer_amp", name = "Mixer Amp", controlspec = specs.MIXER_AMP, action = engine.mixerAmp}
+
+  params:hide("fx_and_mixer")
   
 end
 

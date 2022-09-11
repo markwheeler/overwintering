@@ -320,7 +320,7 @@ Engine_Oystercatcher : CroneEngine {
 			signal = In.ar(in, 2);
 
 			// EQ (reduce lows)
-			signal = BLowShelf.ar(signal, 200, 1, -6);
+			signal = BLowShelf.ar(signal, 300, 1, -6);
 
 			// Compression and clipping
 			signal = CompanderD.ar(in: signal, thresh: 0.4, slopeBelow: 1, slopeAbove: 0.25, clampTime: 0.002, relaxTime: 0.01);

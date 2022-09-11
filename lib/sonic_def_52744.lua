@@ -71,11 +71,11 @@ SonicDef = {
       chord_freq_mod_lfo = 0.0015,
       chord_osc_wave_shape_mod_env = 0.5,
       chord_osc_wave_shape_mod_lfo = 0,
-      chord_osc_level = 1,
+      chord_osc_level = 0.7,
       
       chord_lp_filter_cutoff_mod_env = 0.1,
       chord_lp_filter_cutoff_mod_lfo = 0,
-      chord_lp_filter_resonance = 0.4,
+      chord_lp_filter_resonance = 0.3,
   
       chord_env_attack = 0.0001,
       chord_env_sustain = 0.07,
@@ -89,7 +89,7 @@ SonicDef = {
       chord_delay_send = 0.2,
   
       -- Perc
-      perc_detune_variance = 0.2,
+      perc_detune_variance = 0.15,
       perc_freq_mod_env = 0,
       perc_freq_mod_lfo = 0.01,
   

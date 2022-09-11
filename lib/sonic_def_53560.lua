@@ -1,4 +1,4 @@
--- Rough-legged Buzzard
+-- Common Crane
 
 local MusicUtil = require "musicutil"
 
@@ -8,13 +8,13 @@ SonicDef = {
     musical_scale = MusicUtil.generate_scale(45, "Major", 8), -- A
   
     -- Defines where the roots are measured from
-    chord_start_x = 0.55, -- 0 is left, 1 is right
-    chord_start_y = 0, -- 0 is top, 0.5 is bottom
-    perc_start_x = 0.5,
-    perc_start_y = 0.3,
+    chord_start_x = 0.4, -- 0 is left, 1 is right
+    chord_start_y = 0.15, -- 0 is top, 0.5 is bottom
+    perc_start_x = 0.4,
+    perc_start_y = 0.15,
   
     -- When to expand vs contract trigger order
-    contract_range = {2, 34},
+    contract_range = {20, 36},
   
     -- Dynamic params
     dynamic_params = {
@@ -23,7 +23,7 @@ SonicDef = {
       chord_osc_wave_shape_low = 1,
       chord_osc_wave_shape_high = 0,
       chord_noise_level_low = 0.35,
-      chord_noise_level_high = 0.015,
+      chord_noise_level_high = 0.01,
       chord_lp_filter_cutoff_low = 90,
       chord_lp_filter_cutoff_high = 150,
       chord_amp_mod_lfo_low = 0.2,
